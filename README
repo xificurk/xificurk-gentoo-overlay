@@ -1,0 +1,21 @@
+This is personal gentoo overlay of Petr Morávek [Xificurk].
+It contains various ebuilds missing in official portage tree,
+that I gathered from sources like bugs.gentoo.org, developer's
+overlays, etc.
+
+If you want to use this overlay, you need to:
+
+1) Install layman:
+     # emerge layman
+2) Add my overlay list to /etc/layman/layman.cfg - find the "overlays"
+   directive and add URL:
+     http://github.com/xificurk/xificurk-gentoo-overlay/raw/master/xificurk-overlay.xml
+3) Fetch the overlay list:
+     # layman -L
+4) Add my overlay:
+     # layman -a xificurk
+5) To sync overlay either use manually:
+     # layman -S
+   Or you can sync portage and all your overlays with eix-sync (from eix package), you
+   need to configure eix with:
+     # echo "*" >> /etc/eix-sync.conf

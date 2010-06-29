@@ -3,7 +3,7 @@
 <repositories xmlns="" version="1.0">
 	<repo quality="experimental" status="unofficial">
 		<name>xificurk</name>
-		<description>Personal repo: Random ebuilds that I miss in official portage tree.</description>
+		<description>Personal overlay: Various ebuilds missing in official portage tree.</description>
 		<homepage>http://github.com/xificurk/xificurk-gentoo-overlay</homepage>
 		<owner type="project">
 			<email>xificurk@gmail.com</email>
