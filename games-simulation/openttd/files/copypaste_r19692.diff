@@ -1,0 +1,3513 @@
+Index: src/fios.cpp
+===================================================================
+--- src/fios.cpp	(revision 19692)
++++ src/fios.cpp	(working copy)
+@@ -134,6 +134,7 @@
+ 		case FIOS_TYPE_OLD_SCENARIO:
+ 		case FIOS_TYPE_PNG:
+ 		case FIOS_TYPE_BMP:
++		case FIOS_TYPE_TEMPLATE:
+ 			return item->name;
+ 	}
+ 
+@@ -145,6 +146,8 @@
+ 	const char *extension, *period;
+ 
+ 	extension = (_game_mode == GM_EDITOR) ? ".scn" : ".sav";
++	if (_saveload_mode == SLD_SAVE_TEMPLATE || _saveload_mode == SLD_LOAD_TEMPLATE)
++		extension = ".tmpl";
+ 
+ 	/* Don't append the extension if it is already there */
+ 	period = strrchr(name, '.');
+@@ -409,6 +412,45 @@
+ }
+ 
+ /**
++ * Callback for FiosGetFileList. It tells if a file is a template or not.
++ * @param mode Save/load mode.
++ * @param file Name of the file to check.
++ * @param ext A pointer to the extension identifier inside file
++ * @param title Buffer if a callback wants to lookup the title of the file
++ * @return a FIOS_TYPE_* type of the found file, FIOS_TYPE_INVALID if not a template
++ * @see FiosGetFileList
++ * @see FiosGetSavegameList
++ */
++static FiosType FiosGetTemplateListCallback(SaveLoadDialogMode mode, const char *file, const char *ext, char *title, const char *last)
++{
++	/* Show template files
++	 * .tmpl OpenTTD template */
++	if (strcasecmp(ext, ".tmpl") == 0) return FIOS_TYPE_TEMPLATE;
++
++	return FIOS_TYPE_INVALID;
++}
++
++/**
++ * Get a list of templates.
++ * @param mode Save/load mode.
++ * @return A pointer to an array of FiosItem representing all the files to be shown in the save/load dialog.
++ * @see FiosGetFileList
++ */
++void FiosGetTemplateList(SaveLoadDialogMode mode)
++{
++	static char *_fios_save_path = NULL;
++
++	if (_fios_save_path == NULL) {
++		_fios_save_path = MallocT<char>(MAX_PATH);
++		FioGetDirectory(_fios_save_path, MAX_PATH, SAVE_DIR);
++	}
++
++	_fios_path = _fios_save_path;
++
++	FiosGetFileList(mode, &FiosGetTemplateListCallback, NO_DIRECTORY);
++}
++
++/**
+  * Callback for FiosGetFileList. It tells if a file is a scenario or not.
+  * @param mode Save/load mode.
+  * @param file Name of the file to check.
+Index: src/toolbar_gui.cpp
+===================================================================
+--- src/toolbar_gui.cpp	(revision 19692)
++++ src/toolbar_gui.cpp	(working copy)
+@@ -43,6 +43,7 @@
+ #include "company_base.h"
+ #include "smallmap_gui.h"
+ #include "graph_gui.h"
++#include "command_queue.h"
+ #include "textbuf_gui.h"
+ 
+ #include "network/network.h"
+@@ -1302,6 +1303,11 @@
+ 			case 'Q': case 'W': case 'E': case 'D': ShowTerraformToolbarWithTool(key, keycode); break;
+ 			case 'M': ShowSmallMap(); break;
+ 			case 'V': ShowExtraViewPortWindow(); break;
++			case WKC_CTRL | 'A': _command_queue.ClearCommandQueue(); break; /* Stop pasting in multiplayer */
++			case WKC_CTRL | 'C': ShowCopyPasteToolbar(6); break; /* Invoke Copy */
++			case WKC_CTRL | 'V': ShowCopyPasteToolbar(7); break; /* Invoke Paste */
++			case WKC_CTRL | WKC_INSERT: ShowCopyPasteToolbar(6); break; /* Invoke Copy */
++			case WKC_SHIFT | WKC_INSERT: ShowCopyPasteToolbar(7); break; /* Invoke Paste */
+ 			default: return ES_NOT_HANDLED;
+ 		}
+ 		return ES_HANDLED;
+@@ -1537,6 +1543,8 @@
+ 			case 'Q': case 'W': case 'E': case 'D': ShowEditorTerraformToolbarWithTool(key, keycode); break;
+ 			case 'M': ShowSmallMap(); break;
+ 			case 'V': ShowExtraViewPortWindow(); break;
++			case WKC_CTRL | 'C': ShowCopyPasteToolbar(6); break; /* Invoke Copy */
++			case WKC_CTRL | 'V': ShowCopyPasteToolbar(7); break; /* Invoke Paste */
+ 			default: return ES_NOT_HANDLED;
+ 		}
+ 		return ES_HANDLED;
+Index: src/functions.h
+===================================================================
+--- src/functions.h	(revision 19692)
++++ src/functions.h	(working copy)
+@@ -27,6 +27,9 @@
+ CommandCost CheckOwnership(Owner owner, TileIndex tile = 0);
+ CommandCost CheckTileOwnership(TileIndex tile);
+ 
++/* copy_paste_gui.cpp */
++void ClearCopyArrays(uint32 w, uint32 h);
++
+ /* misc functions */
+ /**
+  * Mark a tile given by its index dirty for repaint.
+Index: src/viewport_type.h
+===================================================================
+--- src/viewport_type.h	(revision 19692)
++++ src/viewport_type.h	(working copy)
+@@ -97,6 +97,7 @@
+ 	DDSP_CREATE_RIVER,         ///< Create rivers
+ 	DDSP_PLANT_TREES,          ///< Plant trees
+ 	DDSP_BUILD_BRIDGE,         ///< Bridge placement
++	DDSP_COPY_AREA,            ///< Copy & paste
+ 
+ 	/* Rail specific actions */
+ 	DDSP_PLACE_RAIL,           ///< Rail placement
+Index: src/lang/german.txt
+===================================================================
+--- src/lang/german.txt	(revision 19692)
++++ src/lang/german.txt	(working copy)
+@@ -2049,6 +2049,27 @@
+ STR_LANDSCAPING_LEVEL_LAND_TOOLTIP                              :{BLACK}Land ausgleichen
+ STR_LANDSCAPING_TOOLTIP_PURCHASE_LAND                           :{BLACK}Land für künftige Nutzung kaufen
+ 
++STR_COPY_PASTE_TOOLBAR                                          :{WHITE}Kopieren
++STR_COPY_PASTE_TOOLTIP                                          :{BLACK}Kopieren & Einfügen
++STR_COPY_PASTE_COPY_TOOLTIP                                     :{BLACK}Kopiert die gewählte Landschaft
++STR_COPY_PASTE_PASTE_TOOLTIP                                    :{BLACK}Fügt die zuvor kopierte Landschaft ein
++STR_COPY_PASTE_ROTATE_LEFT_TOOLTIP                              :{BLACK}Kopie um 90 Grad nach links drehen
++STR_COPY_PASTE_ROTATE_RIGHT_TOOLTIP                             :{BLACK}Kopie um 90 Grad nach rechts drehen
++STR_COPY_PASTE_VACANT_TERRAIN_TOOLTIP                           :{BLACK}Ob unbebautes Gelände wiederhergestellt werden soll
++STR_COPY_PASTE_LOAD_TOOLTIP                                     :{BLACK}Lädt eine Vorlage
++STR_COPY_PASTE_SAVE_TOOLTIP                                     :{BLACK}Speichert die momentane Selektion in eine Vorlage
++STR_COPY_PASTE_MIRROR_HORIZONTAL_TOOLTIP                        :{BLACK}Spiegelt die momentane Selektion an der horizontalen Achse
++STR_COPY_PASTE_MIRROR_VERTICAL_TOOLTIP                          :{BLACK}Spiegelt die momentane Selektion an der vertikalen Achse
++STR_COPY_PASTE_BULLDOZE_BEFORE_BUILD_TOOLTIP                    :{BLACK}Ob bebautes Gelände vor dem Einfügen geräumt werden soll
++STR_COPY_PASTE_TOGGLE_SIGNAL_DIRECTION_TOOLTIP                  :{BLACK}Dreht die Signalrichtung beim Einfügen um
++STR_COPY_PASTE_CONVERT_RAIL_TOOLTIP                             :{BLACK}Wandelt den Gleistyp beim Einfügen in den zuletzt benutzten um
++STR_COPY_PASTE_WITHOUT_RAIL_TOOLTIP                             :{BLACK}Ob Gleise mitkopiert werden sollen
++STR_COPY_PASTE_WITHOUT_ROAD_TOOLTIP                             :{BLACK}Ob Strassen mitkopiert werden sollen
++STR_COPY_PASTE_ONLY_OWN_TOOLTIP                                 :{BLACK}Ob nur eigene Objekte kopiert werden sollen
++
++STR_COPY_PASTE_PASTE_DISABLED                                   :{WHITE}Einfügen nicht erlaubt ...
++STR_CONFIG_PATCHES_CP_PASTE_SPEED                               :{LTBLUE}Einfügegeschwindigkeit im Mehrspielermodus (255 = aus): {ORANGE}{STRING}
++
+ # Tree planting window (last two for SE only)
+ STR_PLANT_TREE_CAPTION                                          :{WHITE}Bäume
+ STR_PLANT_TREE_TOOLTIP                                          :{BLACK}Wähle die zu pflanzende Baumart
+@@ -2240,6 +2261,8 @@
+ STR_SAVELOAD_SAVE_SCENARIO                                      :{WHITE}Szenario speichern
+ STR_SAVELOAD_LOAD_SCENARIO                                      :{WHITE}Szenario laden
+ STR_SAVELOAD_LOAD_HEIGHTMAP                                     :{WHITE}Reliefkarte laden
++STR_SAVELOAD_LOAD_COPY_PASTE_TEMPLATE                           :{WHITE}Vorlage laden
++STR_SAVELOAD_SAVE_COPY_PASTE_TEMPLATE                           :{WHITE}Vorlage speichern
+ STR_SAVELOAD_HOME_BUTTON                                        :{BLACK}Hier klicken, um zum Standardverzeichnis für Spielstände zu gehen
+ STR_SAVELOAD_BYTES_FREE                                         :{BLACK}{BYTES} frei
+ STR_SAVELOAD_LIST_TOOLTIP                                       :{BLACK}Liste der Laufwerke, Verzeichnisse und gespeicherten Spiele
+Index: src/lang/english.txt
+===================================================================
+--- src/lang/english.txt	(revision 19692)
++++ src/lang/english.txt	(working copy)
+@@ -2048,6 +2048,27 @@
+ STR_LANDSCAPING_LEVEL_LAND_TOOLTIP                              :{BLACK}Level land
+ STR_LANDSCAPING_TOOLTIP_PURCHASE_LAND                           :{BLACK}Purchase land for future use
+ 
++STR_COPY_PASTE_TOOLBAR                                          :{WHITE}Copy
++STR_COPY_PASTE_TOOLTIP                                          :{BLACK}Copy & Paste
++STR_COPY_PASTE_COPY_TOOLTIP                                     :{BLACK}Copies the selected area
++STR_COPY_PASTE_PASTE_TOOLTIP                                    :{BLACK}Pastes the copied area
++STR_COPY_PASTE_ROTATE_LEFT_TOOLTIP                              :{BLACK}Rotate 90 Degree CCW
++STR_COPY_PASTE_ROTATE_RIGHT_TOOLTIP                             :{BLACK}Rotate 90 Degree CW
++STR_COPY_PASTE_VACANT_TERRAIN_TOOLTIP                           :{BLACK}If vacant Terrain should be pasted
++STR_COPY_PASTE_LOAD_TOOLTIP                                     :{BLACK}Load a previously saved template
++STR_COPY_PASTE_SAVE_TOOLTIP                                     :{BLACK}Save the current selection to a template
++STR_COPY_PASTE_MIRROR_HORIZONTAL_TOOLTIP                        :{BLACK}Mirror the current selection at the horizontal axis
++STR_COPY_PASTE_MIRROR_VERTICAL_TOOLTIP                          :{BLACK}Mirror the current selection at the vertical axis
++STR_COPY_PASTE_BULLDOZE_BEFORE_BUILD_TOOLTIP                    :{BLACK}Bulldoze non-vacant terrain before pasting
++STR_COPY_PASTE_TOGGLE_SIGNAL_DIRECTION_TOOLTIP                  :{BLACK}Toggle the signal direction when pasting
++STR_COPY_PASTE_CONVERT_RAIL_TOOLTIP                             :{BLACK}Converts used Rail to current railtype when pasting
++STR_COPY_PASTE_WITHOUT_RAIL_TOOLTIP                             :{BLACK}If enabled, Rail will be copied
++STR_COPY_PASTE_WITHOUT_ROAD_TOOLTIP                             :{BLACK}If enabled, Road will be copied
++STR_COPY_PASTE_ONLY_OWN_TOOLTIP                                 :{BLACK}If disabled, only your own items will be copied
++
++STR_COPY_PASTE_PASTE_DISABLED                                   :{WHITE}Pasting is disabled...
++STR_CONFIG_PATCHES_CP_PASTE_SPEED                               :{LTBLUE}Pasting speed in multiplayer. (255 = off): {ORANGE}{STRING1}
++
+ # Tree planting window (last two for SE only)
+ STR_PLANT_TREE_CAPTION                                          :{WHITE}Trees
+ STR_PLANT_TREE_TOOLTIP                                          :{BLACK}Select tree type to plant
+@@ -2239,6 +2260,8 @@
+ STR_SAVELOAD_SAVE_SCENARIO                                      :{WHITE}Save Scenario
+ STR_SAVELOAD_LOAD_SCENARIO                                      :{WHITE}Load Scenario
+ STR_SAVELOAD_LOAD_HEIGHTMAP                                     :{WHITE}Load Heightmap
++STR_SAVELOAD_LOAD_COPY_PASTE_TEMPLATE                           :{WHITE}Load Template
++STR_SAVELOAD_SAVE_COPY_PASTE_TEMPLATE                           :{WHITE}Save Template
+ STR_SAVELOAD_HOME_BUTTON                                        :{BLACK}Click here to jump to the current default save/load directory
+ STR_SAVELOAD_BYTES_FREE                                         :{BLACK}{BYTES} free
+ STR_SAVELOAD_LIST_TOOLTIP                                       :{BLACK}List of drives, directories and saved-game files
+@@ -2249,6 +2272,10 @@
+ STR_SAVELOAD_SAVE_TOOLTIP                                       :{BLACK}Save the current game, using the selected name
+ 
+ STR_SAVELOAD_OSKTITLE                                           :{BLACK}Enter a name for the savegame
++STR_TEMPLATE_LOAD_FAILED                                        :{WHITE}Loading template failed{}{STRING}
++STR_TEMPLATE_SAVE_FAILED                                        :{WHITE}Saving template failed{}{STRING}
++STR_GAME_SAVELOAD_ERROR_TEMPLATE_TOO_NEW                        :Template made with newer version
++STR_GAME_SAVELOAD_ERROR_TEMPLATE_BROKEN                         :Template is invalid
+ 
+ # World generation
+ STR_MAPGEN_WORLD_GENERATION_CAPTION                             :{WHITE}World Generation
+Index: src/settings_gui.cpp
+===================================================================
+--- src/settings_gui.cpp	(revision 19692)
++++ src/settings_gui.cpp	(working copy)
+@@ -1325,6 +1325,7 @@
+ 	SettingEntry("station.never_expire_airports"),
+ 	SettingEntry("construction.freeform_edges"),
+ 	SettingEntry("construction.extra_tree_placement"),
++	SettingEntry("gui.cp_paste_speed"),
+ };
+ /** Construction sub-page */
+ static SettingsPage _settings_construction_page = {_settings_construction, lengthof(_settings_construction)};
+Index: src/command_queue.cpp
+===================================================================
+--- src/command_queue.cpp	(revision 0)
++++ src/command_queue.cpp	(revision 0)
+@@ -0,0 +1,77 @@
++/* $Id: command_queue.cpp 4998 2006-05-30 16:15:17Z Frostregen $ */
++
++#include "stdafx.h"
++#include "tile_type.h"
++#include "command_type.h"
++#include "command_func.h"
++#include "debug.h"
++#include "copy_paste.h"
++#include "command_queue.h"
++#include "settings_type.h"
++#include "gfx_func.h"
++#include "variables.h"
++
++CommandQueue::~CommandQueue()
++{
++	this->ClearCommandQueue();
++}
++
++/** Enqueue the given command.
++ * May be executed later by calling ExecuteNextCommand()
++ */
++void CommandQueue::QueueCommand(TileIndex tile, uint32 p1, uint32 p2, CommandCallback *callback, uint32 cmd)
++{
++	CommandContainer *cc = new CommandContainer;
++	
++	cc->tile = tile;
++	cc->p1   = p1;
++	cc->p2   = p2;
++	cc->callback = callback;
++	cc->cmd  = cmd;
++	
++	/* add it to the queue */
++	this->queue.push(cc);
++}
++
++/** Executes the next queued command, or does nothing if queue is emtpy
++ * Since DoCommandP checks for _shift_pressed,
++ * we have to store, unset und restore it.
++ */
++void CommandQueue::ExecuteNextCommand()
++{
++	/* Check if queue is not empty */
++	if (!this->queue.empty()) {
++		/* backup and unset _shift_pressed */
++		bool temp_shift_pressed = _shift_pressed;
++		_shift_pressed = false;
++		/* Get the command and execute it */
++		DoCommandP(this->queue.front());
++		/* restore _shift_pressed */
++		_shift_pressed = temp_shift_pressed;
++		/* delete this commandcontainer */
++		{
++			CommandContainer *cc = this->queue.front();
++			this->queue.pop();
++			delete cc;
++		}
++	}
++}
++
++/** Clears the CommandQueue
++ */
++void CommandQueue::ClearCommandQueue()
++{
++	while (!this->queue.empty()) {
++		this->queue.pop();
++	}
++}
++
++void CallCommandQueueTick()
++{
++	/* Process the command_queue */
++	if (_settings_client.gui.cp_paste_speed < 255) {
++		if ((_tick_counter % _settings_client.gui.cp_paste_speed) == 0) {
++			_command_queue.ExecuteNextCommand();
++		}
++	}
++}
+Index: src/misc_gui.cpp
+===================================================================
+--- src/misc_gui.cpp	(revision 19692)
++++ src/misc_gui.cpp	(working copy)
+@@ -1647,7 +1647,7 @@
+ /* Colours for fios types */
+ const TextColour _fios_colours[] = {
+ 	TC_LIGHT_BLUE, TC_DARK_GREEN,  TC_DARK_GREEN, TC_ORANGE, TC_LIGHT_BROWN,
+-	TC_ORANGE,     TC_LIGHT_BROWN, TC_ORANGE,     TC_ORANGE, TC_YELLOW
++	TC_ORANGE,     TC_LIGHT_BROWN, TC_ORANGE,     TC_ORANGE, TC_YELLOW, TC_ORANGE
+ };
+ 
+ void BuildFileList()
+@@ -1662,6 +1662,9 @@
+ 			FiosGetScenarioList(_saveload_mode); break;
+ 		case SLD_LOAD_HEIGHTMAP:
+ 			FiosGetHeightmapList(_saveload_mode); break;
++		case SLD_LOAD_TEMPLATE:
++		case SLD_SAVE_TEMPLATE:
++			FiosGetTemplateList(_saveload_mode); break;
+ 
+ 		default: FiosGetSavegameList(_saveload_mode); break;
+ 	}
+@@ -1709,6 +1712,8 @@
+ 			STR_SAVELOAD_SAVE_CAPTION,
+ 			STR_SAVELOAD_SAVE_SCENARIO,
+ 			STR_SAVELOAD_LOAD_HEIGHTMAP,
++			STR_SAVELOAD_SAVE_COPY_PASTE_TEMPLATE,
++			STR_SAVELOAD_LOAD_COPY_PASTE_TEMPLATE,
+ 		};
+ 		assert((uint)mode < lengthof(saveload_captions));
+ 
+@@ -1716,6 +1721,7 @@
+ 		 * by current file mode */
+ 		switch (mode) {
+ 			case SLD_SAVE_GAME:     this->GenerateFileName(); break;
++			case SLD_SAVE_TEMPLATE:
+ 			case SLD_SAVE_SCENARIO: strecpy(this->edit_str_buf, "UNNAMED", &this->edit_str_buf[edit_str_size - 1]); break;
+ 			default:                break;
+ 		}
+@@ -1744,6 +1750,8 @@
+ 
+ 		o_dir.type = FIOS_TYPE_DIRECT;
+ 		switch (_saveload_mode) {
++			case SLD_SAVE_TEMPLATE:
++			case SLD_LOAD_TEMPLATE:
+ 			case SLD_SAVE_GAME:
+ 			case SLD_LOAD_GAME:
+ 				FioGetDirectory(o_dir.name, lengthof(o_dir.name), SAVE_DIR);
+@@ -1763,7 +1771,7 @@
+ 		}
+ 
+ 		/* Focus the edit box by default in the save windows */
+-		if (_saveload_mode == SLD_SAVE_GAME || _saveload_mode == SLD_SAVE_SCENARIO) {
++		if (_saveload_mode == SLD_SAVE_GAME || _saveload_mode == SLD_SAVE_SCENARIO || _saveload_mode == SLD_SAVE_TEMPLATE) {
+ 			this->SetFocusedWidget(SLWW_SAVE_OSK_TITLE);
+ 		}
+ 	}
+@@ -1841,7 +1849,7 @@
+ 		this->vscroll.SetCount(_fios_items.Length());
+ 		this->DrawWidgets();
+ 
+-		if (_saveload_mode == SLD_SAVE_GAME || _saveload_mode == SLD_SAVE_SCENARIO) {
++		if (_saveload_mode == SLD_SAVE_GAME || _saveload_mode == SLD_SAVE_SCENARIO || _saveload_mode == SLD_SAVE_TEMPLATE) {
+ 			this->DrawEditBox(SLWW_SAVE_OSK_TITLE);
+ 		}
+ 	}
+@@ -1893,6 +1901,10 @@
+ 
+ 						delete this;
+ 						ShowHeightmapLoad();
++					} else if (_saveload_mode == SLD_LOAD_TEMPLATE) {
++							/* Load template file here */
++							_switch_mode = SM_LOAD_TEMPLATE;
++							ttd_strlcpy(_file_to_saveload.name, name, sizeof(_file_to_saveload.name));
+ 					} else {
+ 						/* SLD_SAVE_GAME, SLD_SAVE_SCENARIO copy clicked name to editbox */
+ 						ttd_strlcpy(this->text.buf, file->title, this->text.maxsize);
+@@ -1928,7 +1940,7 @@
+ 
+ 	virtual void OnMouseLoop()
+ 	{
+-		if (_saveload_mode == SLD_SAVE_GAME || _saveload_mode == SLD_SAVE_SCENARIO) {
++		if (_saveload_mode == SLD_SAVE_GAME || _saveload_mode == SLD_SAVE_SCENARIO || _saveload_mode == SLD_SAVE_TEMPLATE) {
+ 			this->HandleEditBox(SLWW_SAVE_OSK_TITLE);
+ 		}
+ 	}
+@@ -1941,7 +1953,7 @@
+ 		}
+ 
+ 		EventState state = ES_NOT_HANDLED;
+-		if ((_saveload_mode == SLD_SAVE_GAME || _saveload_mode == SLD_SAVE_SCENARIO) &&
++		if ((_saveload_mode == SLD_SAVE_GAME || _saveload_mode == SLD_SAVE_SCENARIO ||_saveload_mode == SLD_SAVE_TEMPLATE) &&
+ 				this->HandleEditBoxKey(SLWW_SAVE_OSK_TITLE, key, keycode, state) == HEBR_CONFIRM) {
+ 			this->HandleButtonClick(SLWW_SAVE_GAME);
+ 		}
+@@ -1953,7 +1965,7 @@
+ 	{
+ 		/* This test protects against using widgets 11 and 12 which are only available
+ 		 * in those two saveload mode */
+-		if (!(_saveload_mode == SLD_SAVE_GAME || _saveload_mode == SLD_SAVE_SCENARIO)) return;
++		if (!(_saveload_mode == SLD_SAVE_GAME || _saveload_mode == SLD_SAVE_SCENARIO || _saveload_mode == SLD_SAVE_TEMPLATE)) return;
+ 
+ 		if (this->IsWidgetLowered(SLWW_DELETE_SELECTION)) { // Delete button clicked
+ 			if (!FiosDelete(this->text.buf)) {
+@@ -1967,11 +1979,18 @@
+ 			UpdateTextBufferSize(&this->text);
+ 			this->SetDirty();
+ 		} else if (this->IsWidgetLowered(SLWW_SAVE_GAME)) { // Save button clicked
+-			_switch_mode = SM_SAVE;
+-			FiosMakeSavegameName(_file_to_saveload.name, this->text.buf, sizeof(_file_to_saveload.name));
++			if (_saveload_mode == SLD_SAVE_TEMPLATE) {
++				/* Do Template Saving here */
++				_switch_mode = SM_SAVE_TEMPLATE;
++				FiosMakeSavegameName(_file_to_saveload.name, this->text.buf, sizeof(_file_to_saveload.name));
++			}
++			else {
++				_switch_mode = SM_SAVE;
++				FiosMakeSavegameName(_file_to_saveload.name, this->text.buf, sizeof(_file_to_saveload.name));
+ 
+-			/* In the editor set up the vehicle engines correctly (date might have changed) */
+-			if (_game_mode == GM_EDITOR) StartupEngines();
++				/* In the editor set up the vehicle engines correctly (date might have changed) */
++				if (_game_mode == GM_EDITOR) StartupEngines();
++			}
+ 		}
+ 	}
+ 
+@@ -2018,6 +2037,7 @@
+ 	const WindowDesc *sld;
+ 	switch (mode) {
+ 		case SLD_SAVE_GAME:
++		case SLD_SAVE_TEMPLATE:
+ 		case SLD_SAVE_SCENARIO:
+ 			sld = &_save_dialog_desc; break;
+ 		default:
+Index: src/command_queue.h
+===================================================================
+--- src/command_queue.h	(revision 0)
++++ src/command_queue.h	(revision 0)
+@@ -0,0 +1,28 @@
++/* $Id: command_queue.h 4998 2006-05-30 16:13:41Z Frostregen $ */
++
++#ifndef COMMAND_QUEUE_H
++#define COMMAND_QUEUE_H
++
++#include "map_type.h"
++#include "command_type.h"
++#include "settings_type.h"
++#include <queue>
++
++class CommandQueue {
++private:
++	std::queue<CommandContainer *> queue;
++
++public:
++	~CommandQueue();
++
++	void ClearCommandQueue();        ///< Clears the CommandQueue
++
++	void QueueCommand(TileIndex tile, uint32 p1, uint32 p2, CommandCallback *callback, uint32 cmd); ///< Enqueue the given command.
++	void ExecuteNextCommand();       ///< Executes the next queued command, or does nothing if queue is emtpy
++};
++
++extern CommandQueue _command_queue;
++
++void CallCommandQueueTick();
++
++#endif /* COMMAND_QUEUE_H */
+Index: src/table/sprites.h
+===================================================================
+--- src/table/sprites.h	(revision 19692)
++++ src/table/sprites.h	(working copy)
+@@ -180,7 +180,10 @@
+ static const SpriteID SPR_ELRAIL_BASE   = SPR_AUTORAIL_BASE + AUTORAIL_SPRITE_COUNT;
+ static const uint16 ELRAIL_SPRITE_COUNT = 48;
+ 
+-static const SpriteID SPR_2CCMAP_BASE   = SPR_ELRAIL_BASE + ELRAIL_SPRITE_COUNT;
++static const SpriteID SPR_COPYPASTE_BASE = SPR_ELRAIL_BASE + ELRAIL_SPRITE_COUNT;
++static const uint16 COPYPASTE_SPRITE_COUNT = 22;
++
++static const SpriteID SPR_2CCMAP_BASE   = SPR_COPYPASTE_BASE + COPYPASTE_SPRITE_COUNT;
+ static const uint16 TWOCCMAP_SPRITE_COUNT = 256;
+ 
+ /* shore tiles - action 05-0D */
+@@ -1055,6 +1058,23 @@
+ static const SpriteID SPR_IMG_SIGN            = 4082;
+ static const SpriteID SPR_IMG_BUY_LAND        = 4791;
+ 
++/* copy_paste_gui.cpp */
++static const SpriteID SPR_IMG_COPY              = SPR_COPYPASTE_BASE;
++static const SpriteID SPR_IMG_PASTE             = SPR_COPYPASTE_BASE + 1;
++static const SpriteID SPR_IMG_ROTATE_LEFT       = SPR_COPYPASTE_BASE + 2;
++static const SpriteID SPR_IMG_ROTATE_RIGHT      = SPR_COPYPASTE_BASE + 3;
++static const SpriteID SPR_IMG_LOAD              = SPR_COPYPASTE_BASE + 4;
++static const SpriteID SPR_IMG_MINUS_TERRAIN     = SPR_COPYPASTE_BASE + 5;
++static const SpriteID SPR_IMG_NEUTRAL_TERRAIN   = SPR_COPYPASTE_BASE + 6;
++static const SpriteID SPR_IMG_PLUS_TERRAIN      = SPR_COPYPASTE_BASE + 7;
++static const SpriteID SPR_IMG_MINUS_DYNAMITE    = SPR_COPYPASTE_BASE + 10;
++static const SpriteID SPR_IMG_MIRROR_HORIZONTAL = SPR_COPYPASTE_BASE + 12;
++static const SpriteID SPR_IMG_MIRROR_VERTICAL   = SPR_COPYPASTE_BASE + 13;
++static const SpriteID SPR_IMG_MINUS_SIGNAL      = SPR_COPYPASTE_BASE + 14;
++static const SpriteID SPR_IMG_NO_RAIL           = SPR_COPYPASTE_BASE + 16;
++static const SpriteID SPR_IMG_NO_ROAD           = SPR_COPYPASTE_BASE + 18;
++static const SpriteID SPR_IMG_ONLY_OWN          = SPR_COPYPASTE_BASE + 20;
++
+ /* OPEN TRANSPORT TYCOON in gamescreen */
+ static const SpriteID SPR_OTTD_O                = 4842;
+ static const SpriteID SPR_OTTD_P                = 4841;
+@@ -1395,6 +1415,9 @@
+ static const CursorID SPR_CURSOR_CLONE_SHIP     = SPR_OPENTTD_BASE + 112;
+ static const CursorID SPR_CURSOR_CLONE_AIRPLANE = SPR_OPENTTD_BASE + 113;
+ 
++static const CursorID SPR_CURSOR_COPY  = SPR_COPYPASTE_BASE + 8;
++static const CursorID SPR_CURSOR_PASTE = SPR_COPYPASTE_BASE + 9;
++
+ /** Animation macro in table/animcursors.h (_animcursors[]) */
+ 
+ /** Flag for saying a cursor sprite is an animated cursor. */
+Index: src/table/settings.h
+===================================================================
+--- src/table/settings.h	(revision 19692)
++++ src/table/settings.h	(working copy)
+@@ -655,6 +655,9 @@
+ 	 SDTC_VAR(gui.right_mouse_btn_emulation, SLE_UINT8, S, MS, 0, 0, 2, 0, STR_CONFIG_SETTING_RIGHT_MOUSE_BTN_EMU, NULL),
+ #endif
+ 
++	 /* Copy & Paste related patch options */
++	 SDTC_VAR(gui.cp_paste_speed,             SLE_UINT8, S, 0, 5, 1, 255, 1, STR_CONFIG_PATCHES_CP_PASTE_SPEED,    NULL),
++
+ 	SDT_END()
+ };
+ 
+Index: src/copy_paste_gui.cpp
+===================================================================
+--- src/copy_paste_gui.cpp	(revision 0)
++++ src/copy_paste_gui.cpp	(revision 0)
+@@ -0,0 +1,306 @@
++/* $Id: copy_paste_gui.cpp 4998 2006-05-28 07:45:14Z Frostregen $ */
++
++#include "stdafx.h"
++#include "openttd.h"
++#include "gui.h"
++#include "window_gui.h"
++#include "viewport_type.h"
++#include "viewport_func.h"
++#include "gfx_func.h"
++#include "strings_type.h"
++#include "functions.h"
++#include "window_type.h"
++#include "window_func.h"
++#include "sound_type.h"
++#include "sound_func.h"
++#include "tilehighlight_type.h"
++#include "tilehighlight_func.h"
++#include "company_func.h"
++#include "tile_type.h"
++#include "rail_type.h"
++#include "rail_gui.h"
++#include "sprite.h"
++#include "fios.h"
++#include "copy_paste.h"
++#include "table/sprites.h"
++#include "table/strings.h"
++
++/** Current railtype. Used for autoconversion */
++static RailType _last_railtype = RAILTYPE_RAIL;
++
++/* **** GUI Code for Copy&Paste **** */
++
++
++void PlaceProc_Copy(TileIndex tile)
++{
++	VpStartPlaceSizing(tile, VPM_X_AND_Y_LIMITED, DDSP_COPY_AREA);
++	VpSetPlaceSizingLimit(255);
++}
++
++void PlaceProc_Paste(TileIndex tile)
++{
++	_copy_paste.PasteArea(tile);
++}
++
++
++/** Enum referring to the widgets of the copy paste window */
++enum CopyPasteWidgets {
++	CPW_CLOSEBOX = 0,
++	CPW_CAPTION,
++	CPW_STICKYBOX,
++	CPW_SPACER_1,
++	CPW_SPACER_2,
++	CPW_SPACER_3,
++	CPW_COPY,
++	CPW_PASTE,
++	CPW_LOAD,
++	CPW_SAVE,
++	CPW_ROTATE_LEFT,
++	CPW_ROTATE_RIGHT,
++	CPW_MIRROR_HORIZONTAL,
++	CPW_MIRROR_VERTICAL,
++	CPW_TERRAIN,
++	CPW_DYNAMITE,
++	CPW_RAIL,
++	CPW_ROAD,
++	CPW_REVERSE_SIGNALS,
++	CPW_CONVERT_RAILTYPE,
++	CPW_ONLY_OWN,
++
++	CPW_FIRST_CLICKABLE = CPW_COPY,
++	CPW_LAST_CLICKABLE = CPW_ONLY_OWN,
++};
++
++struct CopyPasteWindow : Window {
++public:
++	CopyPasteWindow(const WindowDesc *desc, WindowNumber window_number) : Window()
++	{
++		this->InitNested(desc, window_number);
++
++		/* Set the button states according to variable content */
++		if (_copy_paste.m_clear_before_build) this->LowerWidget(CPW_DYNAMITE);
++		if (_copy_paste.m_toggle_signal_direction) this->LowerWidget(CPW_REVERSE_SIGNALS);
++		if (_copy_paste.m_convert_rail)	  this->LowerWidget(CPW_CONVERT_RAILTYPE);
++		if (_copy_paste.m_copy_with_rail) this->LowerWidget(CPW_RAIL);
++		if (_copy_paste.m_copy_with_road) this->LowerWidget(CPW_ROAD);
++		if (_copy_paste.m_copy_with_other)this->LowerWidget(CPW_ONLY_OWN);
++	}
++
++	virtual void OnPaint()
++	{
++		SetWidgetsDisabledState(!_copy_paste.IsSomethingCopied(), CPW_PASTE, CPW_SAVE,
++				CPW_ROTATE_LEFT, CPW_ROTATE_RIGHT, CPW_MIRROR_HORIZONTAL, CPW_MIRROR_VERTICAL,
++				WIDGET_LIST_END);
++		/* Set image for tri-state button */
++		this->GetWidget<NWidgetCore>(CPW_TERRAIN)->widget_data = SPR_IMG_MINUS_TERRAIN + _copy_paste.m_paste_vacant_terrain;
++
++		this->DrawWidgets();
++
++		/* Draw CylinderGuy in CompanyColor, if unclicked */
++		if (!this->IsWidgetLowered(CPW_ONLY_OWN))
++			DrawSprite(SPR_IMG_ONLY_OWN, COMPANY_SPRITE_COLOUR(_current_company), this->GetWidget<NWidgetCore>(CPW_ONLY_OWN)->pos_x + 1, this->GetWidget<NWidgetCore>(CPW_ONLY_OWN)->pos_y + 1);
++	}
++
++	virtual void OnClick(Point pt, int widget, int click_count)
++	{
++		SetWidgetsDisabledState(!_copy_paste.IsSomethingCopied(), CPW_PASTE, CPW_SAVE,
++				CPW_ROTATE_LEFT, CPW_ROTATE_RIGHT, CPW_MIRROR_HORIZONTAL, CPW_MIRROR_VERTICAL,
++				WIDGET_LIST_END);
++		if (this->IsWidgetDisabled(widget)) return;
++		if ((widget >= CPW_FIRST_CLICKABLE) && (widget <= CPW_LAST_CLICKABLE)) {
++			if (widget != CPW_COPY && widget != CPW_PASTE && 
++				widget != CPW_DYNAMITE && widget != CPW_REVERSE_SIGNALS && 
++				widget != CPW_RAIL && widget !=  CPW_CONVERT_RAILTYPE && 
++				widget != CPW_ROAD && widget != CPW_ONLY_OWN) {
++				this->HandleButtonClick(widget);
++			}
++			SndPlayFx(SND_15_BEEP);
++			switch (widget) {
++				case CPW_COPY:
++					HandlePlacePushButton(this, CPW_COPY, SPR_CURSOR_COPY, HT_RECT, PlaceProc_Copy);
++					break;
++				case CPW_PASTE:
++					HandlePlacePushButton(this, CPW_PASTE, SPR_CURSOR_PASTE, HT_PREVIEW, PlaceProc_Paste);
++					break;
++				case CPW_LOAD:
++					_copy_paste.m_toggle_signal_direction = false;
++					/* fallthrough */
++				case CPW_SAVE:
++					ShowSaveLoadDialog(widget == CPW_SAVE ? SLD_SAVE_TEMPLATE : SLD_LOAD_TEMPLATE);
++					break;
++				case CPW_ROTATE_LEFT:
++				case CPW_ROTATE_RIGHT:
++					if (widget == CPW_ROTATE_LEFT)  _copy_paste.RotateSelectionCCW();
++					if (widget == CPW_ROTATE_RIGHT) _copy_paste.RotateSelectionCW();
++					break;
++				case CPW_MIRROR_HORIZONTAL:
++				case CPW_MIRROR_VERTICAL:
++					if (widget == CPW_MIRROR_HORIZONTAL) _copy_paste.MirrorSelectionHorizontal();
++					if (widget == CPW_MIRROR_VERTICAL)   _copy_paste.MirrorSelectionVertical();
++					
++					/* Toggle SignalDir */
++					this->OnClick(Point(), CPW_REVERSE_SIGNALS, 1);
++					break;
++				case CPW_TERRAIN:
++					_copy_paste.m_paste_vacant_terrain++;
++					if (_copy_paste.m_paste_vacant_terrain > 2) _copy_paste.m_paste_vacant_terrain = 0;
++					break;
++				case CPW_DYNAMITE: case CPW_REVERSE_SIGNALS:
++				case CPW_RAIL: case CPW_CONVERT_RAILTYPE:
++				case CPW_ROAD: case CPW_ONLY_OWN: {
++					this->SetDirty();
++					this->ToggleWidgetLoweredState(widget);
++					bool state = IsWidgetLowered(widget);
++					switch (widget) {
++						case CPW_DYNAMITE:	       _copy_paste.m_clear_before_build = state; break;
++						case CPW_RAIL:             _copy_paste.m_copy_with_rail = state; break;
++						case CPW_ROAD:             _copy_paste.m_copy_with_road = state; break;
++						case CPW_REVERSE_SIGNALS:  _copy_paste.m_toggle_signal_direction = state; break;
++						case CPW_CONVERT_RAILTYPE: _copy_paste.m_convert_rail = state; break;
++						case CPW_ONLY_OWN:         _copy_paste.m_copy_with_other = state; break;
++						default: NOT_REACHED();
++					}
++				} break;
++				default: break;
++			}
++
++			/* Set Selection size to Copy size */
++			if (this->IsWidgetLowered(CPW_PASTE)) {
++				if (_copy_paste.GetWidth() > 0)
++					SetTileSelectSize(_copy_paste.GetWidth() - 1, _copy_paste.GetHeight() - 1);
++			}
++			else
++				SetTileSelectSize(1, 1);
++		}
++	}
++
++	virtual void OnPlaceObject(Point pt, TileIndex tile)
++	{
++		_place_proc(tile);
++	}
++
++	virtual void OnPlaceDrag(ViewportPlaceMethod select_method, ViewportDragDropSelectionProcess select_proc, Point pt)
++	{
++		VpSelectTilesWithMethod(pt.x, pt.y, select_method);
++	}
++
++	virtual void OnPlaceMouseUp(ViewportPlaceMethod select_method, ViewportDragDropSelectionProcess select_proc, Point pt, TileIndex start_tile, TileIndex end_tile)
++	{
++		if (pt.x != -1) {
++			switch (select_proc) {
++				case DDSP_COPY_AREA:
++					_copy_paste.CopyArea(end_tile, start_tile);
++					/* Reset SignalDir */
++					if (_copy_paste.m_toggle_signal_direction) this->OnClick(Point(), CPW_REVERSE_SIGNALS, 1);
++					this->SetDirty();
++					break;
++				default:
++					break;
++			}
++		}
++	}
++
++	virtual void OnPlaceObjectAbort()
++	{
++		/* UnclickWindowButtons "copy" and "paste" */
++		this->RaiseWidget(CPW_COPY);
++		this->RaiseWidget(CPW_PASTE);
++
++		this->SetDirty();
++	}
++
++	virtual void OnTimeout()
++	{
++		this->RaiseWidget(CPW_LOAD);
++		this->RaiseWidget(CPW_SAVE);
++		this->RaiseWidget(CPW_ROTATE_LEFT);
++		this->RaiseWidget(CPW_ROTATE_RIGHT);
++		this->RaiseWidget(CPW_MIRROR_HORIZONTAL);
++		this->RaiseWidget(CPW_MIRROR_VERTICAL);
++		this->RaiseWidget(CPW_TERRAIN);
++		this->SetDirty();
++	}
++
++	virtual void OnTick()
++	{
++		/* If railtype has changed, we need to update our GUI */
++		if (_last_railtype != _cur_railtype) {
++			const RailtypeInfo *rti = GetRailTypeInfo(_cur_railtype);
++			_last_railtype = _cur_railtype;
++			this->GetWidget<NWidgetCore>(CPW_CONVERT_RAILTYPE)->widget_data = rti->gui_sprites.convert_rail;
++			this->SetDirty();
++		}
++	}
++};
++
++static const NWidgetPart _nested_copy_paste_widgets[] = {
++	NWidget(NWID_HORIZONTAL),
++		NWidget(WWT_CLOSEBOX, COLOUR_DARK_GREEN),
++		NWidget(WWT_CAPTION, COLOUR_DARK_GREEN), SetDataTip(STR_COPY_PASTE_TOOLBAR, STR_TOOLTIP_WINDOW_TITLE_DRAG_THIS),
++		NWidget(WWT_STICKYBOX, COLOUR_DARK_GREEN),
++	EndContainer(),
++	NWidget(NWID_HORIZONTAL),
++		NWidget(WWT_IMGBTN, COLOUR_DARK_GREEN, CPW_COPY), SetMinimalSize(22,22),
++								SetFill(0, 1), SetDataTip(SPR_IMG_COPY,              STR_COPY_PASTE_COPY_TOOLTIP),
++		NWidget(WWT_IMGBTN, COLOUR_DARK_GREEN, CPW_PASTE), SetMinimalSize(22,22),
++								SetFill(0, 1), SetDataTip(SPR_IMG_PASTE,             STR_COPY_PASTE_PASTE_TOOLTIP),
++
++		NWidget(WWT_PANEL, COLOUR_DARK_GREEN), SetMinimalSize(4, 22), EndContainer(),
++
++		NWidget(WWT_IMGBTN, COLOUR_DARK_GREEN, CPW_LOAD), SetMinimalSize(22,22),
++								SetFill(0, 1), SetDataTip(SPR_IMG_LOAD,              STR_COPY_PASTE_LOAD_TOOLTIP),
++		NWidget(WWT_IMGBTN, COLOUR_DARK_GREEN, CPW_SAVE), SetMinimalSize(22,22),
++								SetFill(0, 1), SetDataTip(SPR_IMG_SAVE,              STR_COPY_PASTE_SAVE_TOOLTIP),
++
++		NWidget(WWT_PANEL, COLOUR_DARK_GREEN), SetMinimalSize(4, 22), EndContainer(),
++
++		NWidget(WWT_IMGBTN, COLOUR_DARK_GREEN, CPW_ROTATE_LEFT), SetMinimalSize(22,22),
++								SetFill(0, 1), SetDataTip(SPR_IMG_ROTATE_LEFT,       STR_COPY_PASTE_ROTATE_LEFT_TOOLTIP),
++		NWidget(WWT_IMGBTN, COLOUR_DARK_GREEN, CPW_ROTATE_RIGHT), SetMinimalSize(22,22),
++								SetFill(0, 1), SetDataTip(SPR_IMG_ROTATE_RIGHT,      STR_COPY_PASTE_ROTATE_RIGHT_TOOLTIP),
++		NWidget(WWT_IMGBTN, COLOUR_DARK_GREEN, CPW_MIRROR_HORIZONTAL), SetMinimalSize(22,22),
++								SetFill(0, 1), SetDataTip(SPR_IMG_MIRROR_HORIZONTAL, STR_COPY_PASTE_MIRROR_HORIZONTAL_TOOLTIP),
++		NWidget(WWT_IMGBTN, COLOUR_DARK_GREEN, CPW_MIRROR_VERTICAL), SetMinimalSize(22,22),
++								SetFill(0, 1), SetDataTip(SPR_IMG_MIRROR_VERTICAL,   STR_COPY_PASTE_MIRROR_VERTICAL_TOOLTIP),
++
++		NWidget(WWT_PANEL, COLOUR_DARK_GREEN), SetMinimalSize(4, 22), EndContainer(),
++
++		NWidget(WWT_IMGBTN, COLOUR_DARK_GREEN, CPW_TERRAIN), SetMinimalSize(22,22),
++								SetFill(0, 1), SetDataTip(SPR_IMG_MINUS_TERRAIN,     STR_COPY_PASTE_VACANT_TERRAIN_TOOLTIP),
++		NWidget(WWT_IMGBTN_2, COLOUR_DARK_GREEN, CPW_DYNAMITE), SetMinimalSize(22,22),
++								SetFill(0, 1), SetDataTip(SPR_IMG_MINUS_DYNAMITE,    STR_COPY_PASTE_BULLDOZE_BEFORE_BUILD_TOOLTIP),
++		NWidget(WWT_IMGBTN_2, COLOUR_DARK_GREEN, CPW_RAIL), SetMinimalSize(22,22),
++								SetFill(0, 1), SetDataTip(SPR_IMG_NO_RAIL,           STR_COPY_PASTE_WITHOUT_RAIL_TOOLTIP),
++		NWidget(WWT_IMGBTN_2, COLOUR_DARK_GREEN, CPW_ROAD), SetMinimalSize(22,22),
++								SetFill(0, 1), SetDataTip(SPR_IMG_NO_ROAD,           STR_COPY_PASTE_WITHOUT_ROAD_TOOLTIP),
++		NWidget(WWT_IMGBTN_2, COLOUR_DARK_GREEN, CPW_REVERSE_SIGNALS), SetMinimalSize(22,22),
++								SetFill(0, 1), SetDataTip(SPR_IMG_MINUS_SIGNAL,      STR_COPY_PASTE_TOGGLE_SIGNAL_DIRECTION_TOOLTIP),
++		NWidget(WWT_IMGBTN, COLOUR_DARK_GREEN, CPW_CONVERT_RAILTYPE), SetMinimalSize(22,22),
++								SetFill(0, 1), SetDataTip(SPR_IMG_CONVERT_RAIL,      STR_COPY_PASTE_CONVERT_RAIL_TOOLTIP),
++		NWidget(WWT_IMGBTN_2, COLOUR_DARK_GREEN, CPW_ONLY_OWN), SetMinimalSize(22,22),
++								SetFill(0, 1), SetDataTip(SPR_IMG_ONLY_OWN,          STR_COPY_PASTE_ONLY_OWN_TOOLTIP),
++	EndContainer(),
++};
++
++static const WindowDesc _copy_paste_desc(
++	WDP_ALIGN_TOOLBAR, 0, 0,
++	WC_COPY_PASTE, WC_SCEN_LAND_GEN,
++	WDF_CONSTRUCTION,
++	_nested_copy_paste_widgets, lengthof(_nested_copy_paste_widgets)
++);
++
++void ShowCopyPasteToolbarGui() // When clicking the button in the terrain generation gui
++{
++	AllocateWindowDescFront<CopyPasteWindow>(&_copy_paste_desc, 0);
++}
++
++void ShowCopyPasteToolbar(int button) // When using a shortcut
++{
++	Window *w;
++	/* don't recreate the window if we're clicking on a button and the window exists. */
++	if (button < CPW_FIRST_CLICKABLE || !(w = FindWindowById(WC_COPY_PASTE, 0))) {
++		DeleteWindowByClass(WC_COPY_PASTE);
++		w = new CopyPasteWindow(&_copy_paste_desc,0);
++	}
++	if (w != NULL) w->OnClick(Point(), button, 1);
++}
+Index: src/copy_paste.h
+===================================================================
+--- src/copy_paste.h	(revision 0)
++++ src/copy_paste.h	(revision 0)
+@@ -0,0 +1,113 @@
++/* $Id: command_queue.h 4998 2006-05-30 16:13:41Z Frostregen $ */
++
++#ifndef COPY_PASTE_H
++#define COPY_PASTE_H
++
++#include "map_type.h"
++#include "command_type.h"
++#include "signal_type.h"
++#include "track_type.h"
++#include "slope_type.h"
++#include "road_map.h"
++#include "saveload/saveload.h"
++
++class CopyPaste {
++public:
++	bool  m_copy_with_rail;          ///< If rail should be copied
++	bool  m_copy_with_road;          ///< If road should be copied
++	bool  m_copy_with_other;         ///< If stuff owned by other players should be copied
++
++	uint8 m_paste_vacant_terrain;    ///< If empty terrain should be recreated. 0 = no terraform, 1 = terraform only needed, 2 = terraform all terrain
++	bool  m_convert_rail;            ///< If rails should be converted to currently selected railtype
++	bool  m_clear_before_build;      ///< If terrain should be bulldozed before we try to paste it
++	bool  m_toggle_signal_direction; ///< If signal direction should be toggled when pasting
++
++private:
++	uint32   m_width;
++	uint32   m_height;
++        StringID error_str;
++	char     *error_msg;
++
++	CommandCost m_costs; ///< Stores the costs needed for template paste - estimate
++
++	/** Storage space for copied area 
++	 * TODO: Convert to struct (saveload...)
++	 */
++	int8   *m_heightmap;      ///<  | Move terrain needed into this...
++	uint8  *m_terrain_needed; ///<  2Bit needed
++	uint8  *m_tiletype;       ///<  8Bit needed
++	uint8  *m_railroad;       ///<  8Bit needed
++	uint16 *m_signals;        ///< 15Bit needed
++	//TODO: uint8 *m_station;
++
++public:
++	enum CopyPasteTileType {
++		CP_TILE_CLEAR,
++		CP_TILE_RAIL,
++		CP_TILE_ROAD,
++		CP_TILE_TUNNELBRIDGE,
++		CP_TILE_STATION,
++	};
++	explicit CopyPaste();
++	~CopyPaste();
++
++	SaveOrLoadResult SaveLoadTemplate(const char *filename, int mode);
++	const char *GetErrorString();
++	bool IsSomethingCopied(); ///< Returns if something is in our copy buffer.
++	void AllocateMapArray(uint32 max_tiles); ///< allocate a map array
++	void ClearCopyArrays();   ///< Clears content of copy buffers for current width/height, but does NOT reset width/height.
++
++	void CopyArea(TileIndex end, TileIndex start); ///< Copies given area into copy buffer
++	void PasteArea(TileIndex tile);                ///< Paste copied content onto map, taking care of multiplayer/singleplayer environment.
++
++	void RotateSelectionCCW();
++	void RotateSelectionCW();
++	void MirrorSelectionHorizontal();
++	void MirrorSelectionVertical();
++	uint GetHeight(uint baseh, uint index);
++	Slope GetSlope(uint index);
++	CopyPasteTileType GetCPTileType(uint index);
++	uint GetCPMinorTileType(uint index);
++	TrackBits GetCPTrackBits(uint index);
++
++	FORCEINLINE uint32 GetWidth()  { return m_width;  };	///< Used by the GUI
++	FORCEINLINE uint32 GetHeight() { return m_height; };
++
++private:
++	void SetError(StringID message, StringID extra = INVALID_STRING_ID);
++
++	void internal_PasteArea(TileIndex tile); ///< internal PasteArea method
++
++	void CP_DoCommand(TileIndex tile, uint32 p1, uint32 p2, CommandCallback *callback, uint32 cmd); ///< Special DoCommand for CopyPaste
++
++	void CP_RaiseLowerLand  (TileIndex tile, int mode);
++	void CP_PlaceRail       (TileIndex tile, int cmd, uint32 railtype);
++	void CP_PlaceSignals    (TileIndex tile, Track track, SignalType type, uint direction, bool semaphore);
++	void CP_PlaceRoad       (TileIndex tile, uint8 road_bits);
++	void CP_PlaceRoadStop(TileIndex tile, uint8 direction, uint8 roadtype, bool truck_stop, bool drive_through);
++	void CP_PlaceRail_Tunnel(TileIndex tile, uint32 railtype);
++	void CP_PlaceRoad_Tunnel(TileIndex tile, uint8 roadtype);
++	void CP_Build_Bridge    (TileIndex start, TileIndex end, uint8 bridgetype, uint8 transport_type, uint8 rail_road_type);
++	void CP_PlaceRail_Depot (TileIndex tile, uint8 railtype, uint8 direction);
++	void CP_PlaceRoad_Depot (TileIndex tile, uint8 direction_type);
++	void CP_PlaceWaypoint   (TileIndex tile, uint8 waypoint_type);
++	void CP_ClearTile       (TileIndex start_tile, TileIndex end_tile);
++		
++	uint8 MirrorSignalDirection(uint8 direction);
++	DisallowedRoadDirections MirrorOneWayRoadDirection(DisallowedRoadDirections drd);
++	void SwapSignalInfo(uint index);
++	void PasteSignals(uint index, TileIndex tile);
++	void PasteLandscape(TileIndex tile);
++
++	void TerrainNeededAroundTile(TileIndex tindex, TileIndex bindex);
++	int8 ClampToRight(TileIndex index, int8 baseh, int8 h_tile);
++	int8 ClampToUp(TileIndex index, int8 baseh, int8 h_tile, int32 size_x);
++
++	FORCEINLINE void SetWidth(uint32 width)   { m_width  = width;  };
++	FORCEINLINE void SetHeight(uint32 height) { m_height = height; }; 
++};
++
++extern CopyPaste _copy_paste;
++
++#endif /* COPY_PASTE_H */
++
+Index: src/window_type.h
+===================================================================
+--- src/window_type.h	(revision 19692)
++++ src/window_type.h	(working copy)
+@@ -106,6 +106,7 @@
+ 	WC_AI_DEBUG,
+ 	WC_AI_LIST,
+ 	WC_AI_SETTINGS,
++	WC_COPY_PASTE,
+ 
+ 	WC_INVALID = 0xFFFF
+ };
+Index: src/fios.h
+===================================================================
+--- src/fios.h	(revision 19692)
++++ src/fios.h	(working copy)
+@@ -39,6 +39,8 @@
+ 	SLD_SAVE_GAME,
+ 	SLD_SAVE_SCENARIO,
+ 	SLD_LOAD_HEIGHTMAP,
++	SLD_SAVE_TEMPLATE,
++	SLD_LOAD_TEMPLATE,
+ 	SLD_NEW_GAME,
+ };
+ 
+@@ -61,6 +63,7 @@
+ 	FIOS_TYPE_DIRECT,
+ 	FIOS_TYPE_PNG,
+ 	FIOS_TYPE_BMP,
++	FIOS_TYPE_TEMPLATE,
+ 	FIOS_TYPE_INVALID = 255,
+ };
+ 
+@@ -102,6 +105,8 @@
+ void FiosGetScenarioList(SaveLoadDialogMode mode);
+ /* Get a list of Heightmaps */
+ void FiosGetHeightmapList(SaveLoadDialogMode mode);
++/* Get a list of templates */
++void FiosGetTemplateList(SaveLoadDialogMode mode);
+ /* Free the list of savegames */
+ void FiosFreeSavegameList();
+ /* Browse to. Returns a filename w/path if we reached a file. */
+Index: src/rail_gui.h
+===================================================================
+--- src/rail_gui.h	(revision 19692)
++++ src/rail_gui.h	(working copy)
+@@ -14,6 +14,8 @@
+ 
+ #include "rail_type.h"
+ 
++extern RailType _cur_railtype;
++
+ void ShowBuildRailToolbar(RailType railtype, int button);
+ void ReinitGuiAfterToggleElrail(bool disable);
+ bool ResetSignalVariant(int32 = 0);
+Index: src/terraform_gui.cpp
+===================================================================
+--- src/terraform_gui.cpp	(revision 19692)
++++ src/terraform_gui.cpp	(working copy)
+@@ -178,6 +178,7 @@
+ 	TTW_BUY_LAND,                         ///< Buy land button
+ 	TTW_PLANT_TREES,                      ///< Plant trees button (note: opens seperate window, no place-push-button)
+ 	TTW_PLACE_SIGN,                       ///< Place sign button
++	TTW_COPY_PASTE,                       ///< CopyPaste button
+ };
+ 
+ static void TerraformClick_Lower(Window *w)
+@@ -216,6 +217,12 @@
+ 	HandlePlacePushButton(w, TTW_PLACE_SIGN, SPR_CURSOR_SIGN, HT_RECT, PlaceProc_Sign);
+ }
+ 
++static void TerraformClick_CopyPaste(Window *w)
++{
++	/* This button is NOT a place-push-button, so don't treat it as such */
++	ShowCopyPasteToolbarGui();
++}
++
+ static OnButtonClick * const _terraform_button_proc[] = {
+ 	TerraformClick_Lower,
+ 	TerraformClick_Raise,
+@@ -224,6 +231,7 @@
+ 	TerraformClick_BuyLand,
+ 	TerraformClick_Trees,
+ 	TerraformClick_PlaceSign,
++	TerraformClick_CopyPaste,
+ };
+ 
+ struct TerraformToolbarWindow : Window {
+@@ -319,6 +327,8 @@
+ 								SetFill(0, 1), SetDataTip(SPR_IMG_PLANTTREES, STR_SCENEDIT_TOOLBAR_PLANT_TREES),
+ 		NWidget(WWT_IMGBTN, COLOUR_DARK_GREEN, TTW_PLACE_SIGN), SetMinimalSize(22,22),
+ 								SetFill(0, 1), SetDataTip(SPR_IMG_SIGN, STR_SCENEDIT_TOOLBAR_PLACE_SIGN),
++		NWidget(WWT_IMGBTN, COLOUR_DARK_GREEN, TTW_COPY_PASTE), SetMinimalSize(22,22),
++								SetFill(0, 1), SetDataTip(SPR_IMG_COPY, STR_COPY_PASTE_TOOLTIP),
+ 	EndContainer(),
+ };
+ 
+@@ -483,6 +493,7 @@
+ 	ETTW_PLACE_ROCKS,                      ///< Place rocks button
+ 	ETTW_PLACE_DESERT_LIGHTHOUSE,          ///< Place desert button (in tropical climate) / place lighthouse button (else)
+ 	ETTW_PLACE_TRANSMITTER,                ///< Place transmitter button
++	ETTW_COPY_PASTE,                       ///< Show Copy Paste Toolbar
+ 	ETTW_BUTTONS_END,                      ///< End of pushable buttons
+ 	ETTW_INCREASE_SIZE = ETTW_BUTTONS_END, ///< Upwards arrow button to increase terraforming size
+ 	ETTW_DECREASE_SIZE,                    ///< Downwards arrow button to decrease terraforming size
+@@ -514,6 +525,8 @@
+ 										SetFill(0, 1), SetDataTip(SPR_IMG_LIGHTHOUSE_DESERT, STR_NULL),
+ 			NWidget(WWT_IMGBTN, COLOUR_GREY, ETTW_PLACE_TRANSMITTER), SetMinimalSize(23, 22),
+ 										SetFill(0, 1), SetDataTip(SPR_IMG_TRANSMITTER, STR_TERRAFORM_TOOLTIP_PLACE_TRANSMITTER),
++			NWidget(WWT_IMGBTN, COLOUR_GREY, ETTW_COPY_PASTE), SetMinimalSize(22,22),
++										SetFill(0, 1), SetDataTip(SPR_IMG_COPY, STR_COPY_PASTE_TOOLTIP),
+ 			NWidget(NWID_SPACER), SetFill(1, 0),
+ 		EndContainer(),
+ 		NWidget(NWID_HORIZONTAL),
+@@ -576,6 +589,12 @@
+ 	HandlePlacePushButton(w, ETTW_PLACE_TRANSMITTER, SPR_CURSOR_TRANSMITTER, HT_RECT, PlaceProc_Transmitter);
+ }
+ 
++static void EditorTerraformClick_CopyPaste(Window *w)
++{
++	/* This button is NOT a place-push-button, so don't treat it as such */
++	ShowCopyPasteToolbarGui();
++}
++
+ static const uint16 _editor_terraform_keycodes[] = {
+ 	'D',
+ 	'Q',
+@@ -594,7 +613,8 @@
+ 	EditorTerraformClick_LevelLand,
+ 	EditorTerraformClick_RockyArea,
+ 	EditorTerraformClick_DesertLightHouse,
+-	EditorTerraformClick_Transmitter
++	EditorTerraformClick_Transmitter,
++	EditorTerraformClick_CopyPaste,
+ };
+ 
+ 
+Index: src/rail_gui.cpp
+===================================================================
+--- src/rail_gui.cpp	(revision 19692)
++++ src/rail_gui.cpp	(working copy)
+@@ -37,7 +37,7 @@
+ #include "table/sprites.h"
+ #include "table/strings.h"
+ 
+-static RailType _cur_railtype;               ///< Rail type of the current build-rail toolbar.
++RailType _cur_railtype;                      ///< Rail type of the current build-rail toolbar.
+ static bool _remove_button_clicked;          ///< Flag whether 'remove' toggle-button is currently enabled
+ static DiagDirection _build_depot_direction; ///< Currently selected depot direction
+ static byte _waypoint_count = 1;             ///< Number of waypoint types
+Index: src/tunnelbridge_cmd.cpp
+===================================================================
+--- src/tunnelbridge_cmd.cpp	(revision 19692)
++++ src/tunnelbridge_cmd.cpp	(working copy)
+@@ -97,6 +97,29 @@
+ }
+ 
+ /**
++ * Returns the fastest currently available bridge for given length.
++ */
++BridgeType GetFastestAvailableBridgeType(uint bridge_len)
++{
++	BridgeType fastest_type = 0;
++	uint16 fastest_speed = 0;
++
++	for (BridgeType brd_type = 0; brd_type != MAX_BRIDGES; brd_type++) {
++		CommandCost ret = CheckBridgeAvailability(brd_type, bridge_len, DC_NONE);
++		if (!ret.Failed()) {
++			/* bridge is accepted, compare speeds */
++			const BridgeSpec *b = GetBridgeSpec(brd_type);
++			if (b->speed >= fastest_speed) {
++				fastest_type = brd_type;
++				fastest_speed = b->speed;
++			}
++		}
++	}
++
++	return fastest_type;
++}
++
++/**
+  * Determines if the track on a bridge ramp is flat or goes up/down.
+  *
+  * @param tileh Slope of the tile under the bridge head
+Index: src/settings_type.h
+===================================================================
+--- src/settings_type.h	(revision 19692)
++++ src/settings_type.h	(working copy)
+@@ -110,6 +110,7 @@
+ 	bool   show_date_in_logs;                ///< whether to show dates in console logs
+ 	bool   newgrf_developer_tools;           ///< activate NewGRF developer tools
+ 	bool   ai_developer_tools;               ///< activate AI developer tools
++	uint8  cp_paste_speed;                   ///< paste speed in multiplayer games (ticks between pastes)
+ };
+ 
+ /** Settings related to currency/unit systems. */
+Index: src/depot_map.h
+===================================================================
+--- src/depot_map.h	(revision 19692)
++++ src/depot_map.h	(working copy)
+@@ -55,4 +55,6 @@
+ 	return _m[t].m2;
+ }
+ 
++DiagDirection GetDepotDirection(TileIndex tile, TransportType type);
++
+ #endif /* DEPOT_MAP_H */
+Index: src/gui.h
+===================================================================
+--- src/gui.h	(revision 19692)
++++ src/gui.h	(working copy)
+@@ -18,6 +18,7 @@
+ #include "tile_type.h"
+ #include "strings_type.h"
+ #include "transport_type.h"
++#include "rail.h"
+ 
+ /* main_gui.cpp */
+ void HandleOnEditText(const char *str);
+@@ -43,6 +44,10 @@
+ void ShowGenerateLandscape();
+ void ShowHeightmapLoad();
+ 
++/* copy_paste_gui.cpp */
++void ShowCopyPasteToolbarGui();        // using the button in the terraform gui
++void ShowCopyPasteToolbar(int button); // using shortcuts
++
+ /* misc_gui.cpp */
+ void PlaceLandBlockInfo();
+ void ShowAboutWindow();
+Index: src/copy_paste.cpp
+===================================================================
+--- src/copy_paste.cpp	(revision 0)
++++ src/copy_paste.cpp	(revision 0)
+@@ -0,0 +1,1759 @@
++/* $Id: copy_paste.cpp 5998 2006-05-28 07:45:14Z Frostregen $ */
++
++#include "stdafx.h"
++#include "openttd.h"
++#include "table/sprites.h"
++#include "strings_type.h"
++#include "table/strings.h"
++#include "functions.h"
++#include "company_func.h"
++#include "tile_type.h"
++#include "window_type.h"
++#include "gui.h"
++#include "rail_map.h"
++#include "rail_gui.h"
++#include "gfx_func.h"
++#include "settings_type.h"
++#include "sound_type.h"
++#include "sound_func.h"
++#include "command_type.h"
++#include "command_func.h"
++#include "tunnel_map.h"
++#include "bridge_map.h"
++#include "tunnelbridge_map.h"
++#include "tunnelbridge.h"
++#include "waypoint_base.h"
++#include "debug.h"
++#include "depot_map.h"
++#include "saveload/saveload.h"
++#include "window_func.h"
++#include "strings_func.h"
++#include "slope_type.h"
++#include "network/network.h"
++#include "command_queue.h"
++#include "copy_paste.h"
++#include "core/alloc_func.hpp"
++#include "core/endian_func.hpp"
++
++//Total Space used = 8 * COPY_MAX = ?kb
++CopyPaste _copy_paste = CopyPaste();
++
++/* Major version for saved templates */
++extern const uint32 COPYPASTE_VERSION = 1;
++
++CommandQueue _command_queue = CommandQueue();
++
++StringID error_message;		///< error string, used by save/load
++StringID error_extra;		///< extra error message (or NULL)
++
++CopyPaste::CopyPaste()
++{
++	m_width     = 0;
++	m_height    = 0;
++	
++	m_copy_with_rail          = true;
++	m_copy_with_road          = true;
++	m_copy_with_other         = false;
++	m_paste_vacant_terrain    = 1;
++	m_convert_rail            = true;
++	m_clear_before_build      = true;
++	m_toggle_signal_direction = false;
++}
++
++void CopyPaste::AllocateMapArray(uint32 max_tiles)
++{
++	this->ClearCopyArrays();
++	m_heightmap      = CallocT< int8>(max_tiles);
++	m_terrain_needed = CallocT<uint8>(max_tiles);
++	m_tiletype       = CallocT<uint8>(max_tiles);
++	m_railroad       = CallocT<uint8>(max_tiles);
++	m_signals        = CallocT<uint16>(max_tiles);
++}
++
++CopyPaste::~CopyPaste()
++{
++	this->ClearCopyArrays();
++}
++
++/** Returns if something is currently copied 
++ */
++bool CopyPaste::IsSomethingCopied()
++{
++	return !((GetWidth() == 0) || (GetHeight() == 0));
++}
++
++/** Clears the Arrays which store the copied area.
++ */
++void CopyPaste::ClearCopyArrays()
++{
++	free(m_heightmap);
++	free(m_terrain_needed);
++	free(m_tiletype);
++	free(m_railroad);
++	free(m_signals);
++	m_width = 0;
++	m_height = 0;
++}
++
++
++/**
++ * SaveLoad function for templates
++ * TODO: Compression
++ * TODO: Better error handling (use goto for block error handling)
++ **/
++SaveOrLoadResult CopyPaste::SaveLoadTemplate(const char *filename, int mode)
++{
++	FILE* fh;
++	uint32 hdr[4];
++	uint32 tlen = GetWidth() * GetHeight();
++	uint32 blen = (GetWidth() - 1) * (GetHeight() - 1);
++	uint32 index;
++	uint16 tmp16;
++	uint16* ptmp16;
++	ptmp16 = &tmp16;
++	
++	uint32 version;
++
++	fh = (mode == SL_SAVE) ? fopen(filename, "wb") : fopen(filename, "rb");
++
++	switch(mode) {
++		case SL_SAVE:
++			hdr[0] = TO_BE32X('TMPL');
++			/* For now we only have a major version, but may use minor in future? */
++			hdr[1] = TO_BE32(COPYPASTE_VERSION);
++			hdr[2] = TO_BE32(GetWidth());
++			hdr[3] = TO_BE32(GetHeight());
++
++			if (fwrite(hdr, sizeof(hdr), 1, fh) != 1) {
++				fclose(fh);
++				SetError(STR_TEMPLATE_SAVE_FAILED, STR_GAME_SAVELOAD_ERROR_FILE_NOT_WRITEABLE);
++				return SL_ERROR;
++			}
++
++			if (fwrite(m_heightmap, sizeof(int8), tlen, fh) != tlen) goto save_error;
++			if (fwrite(m_terrain_needed, sizeof(uint8), tlen, fh) != tlen) goto save_error;
++			if (fwrite(m_tiletype, sizeof(uint8), blen, fh) != blen) goto save_error;
++			if (fwrite(m_railroad, sizeof(uint8), blen, fh) != blen) goto save_error;
++
++			for (index = 0; index < blen; index++)
++			{
++				tmp16 = TO_BE16(m_signals[index]);
++				if (fwrite(ptmp16, sizeof(uint16), 1, fh) != 1) goto save_error;
++			}
++
++			break;
++
++		case SL_LOAD:
++			if (fread(hdr, sizeof(hdr), 1, fh) != 1) goto load_error;
++			if (FROM_BE32(hdr[0]) != 'TMPL') {
++				SetError(STR_TEMPLATE_LOAD_FAILED, STR_GAME_SAVELOAD_ERROR_TEMPLATE_BROKEN);
++				return SL_ERROR;
++			}
++
++			version = FROM_BE32(hdr[1]);
++			DEBUG(sl, 1, "Loading template with version %d", version);
++
++			/* Check whether we can load this template */
++			if (version > COPYPASTE_VERSION) {
++				DEBUG(sl, 1, "Can't load template with version %d, too new!", version);
++				SetError(STR_TEMPLATE_LOAD_FAILED, STR_GAME_SAVELOAD_ERROR_TEMPLATE_TOO_NEW);
++				return SL_ERROR;
++			}
++	DEBUG(sl, 1, "Getting bounds");
++
++			{
++				uint32 width = FROM_BE32(hdr[2]);
++				uint32 height = FROM_BE32(hdr[3]);
++				AllocateMapArray(width * height);
++				SetWidth(width);
++				SetHeight(height);
++			}
++
++			tlen = GetWidth() * GetHeight();
++			blen = (GetWidth() - 1) * (GetHeight() - 1);
++
++	DEBUG(sl, 1, "Allocated arrays, loading from file");
++
++			if (fread(m_heightmap, sizeof(int8), tlen, fh) != tlen) goto load_error;
++			if (fread(m_terrain_needed, sizeof(uint8), tlen, fh) != tlen) goto load_error;
++			if (fread(m_tiletype, sizeof(uint8), blen, fh) != blen) goto load_error;
++			if (fread(m_railroad, sizeof(uint8), blen, fh) != blen) goto load_error;
++	DEBUG(sl, 1, "Reading signals");
++
++			for (index = 0; index < blen; index++) {
++				if (fread(ptmp16, sizeof(uint16), 1, fh) != 1) goto load_error;
++				m_signals[index] = FROM_BE16(tmp16);
++			}
++			SetWindowDirty(WC_COPY_PASTE, 0);
++			break;
++
++		default:
++			/* Not reached */
++			break;
++	}
++
++	fclose(fh);
++
++	return SL_OK;
++
++save_error:
++	SetError(STR_TEMPLATE_SAVE_FAILED);
++	fclose(fh);
++	return SL_ERROR;
++
++load_error:
++	SetError(STR_TEMPLATE_LOAD_FAILED);
++	fclose(fh);
++	return SL_ERROR;
++}
++
++/** Set the error string & an extra message */
++void CopyPaste::SetError(StringID message, StringID extra)
++{
++	error_message = message;
++	error_extra = extra;
++}
++
++/** Get the string representation of the error message */
++const char* CopyPaste::GetErrorString()
++{
++	//SetDParam(0, error_message);
++	SetDParam(0, error_extra);
++
++	static char str[512];
++	GetString(str, error_message, lastof(str));
++	return str;
++}
++
++/** DoCommand for Copy&Paste.
++ * If shift is pressed, a cost-estimate is displayed instead of executing the paste.
++ * 
++ * If we are in multiplayer the pasting is redirected to the command-queue,
++ * which delays execution, to prevent overflowing the network connection.
++ */
++void CopyPaste::CP_DoCommand(TileIndex tile, uint32 p1, uint32 p2, CommandCallback *callback, uint32 cmd)
++{
++	if (_shift_pressed) {
++		CommandCost res = DoCommand(tile, p1, p2, DC_QUERY_COST, cmd & 0xFF, "");
++		if (!res.Failed())
++			m_costs.AddCost(res);
++	}
++	else {
++#ifdef ENABLE_NETWORK
++		if (_networking) {
++			_command_queue.QueueCommand(tile, p1, p2, callback, cmd);
++		}
++		else
++#endif /* ENABLE_NETWORK */
++			DoCommandP(tile, p1, p2, cmd, callback);
++	}
++}
++
++/* *** Copy&Paste Helper functions. Mainly the same as the originals. Just without sound *** */
++
++/**
++ * @param tile The Tile to operate on 
++ * @param mode true means Raise, false means Lower
++ */
++void CopyPaste::CP_RaiseLowerLand(TileIndex tile, int mode)
++{
++	CP_DoCommand(tile, 8, (uint32)mode, NULL, CMD_TERRAFORM_LAND | CMD_MSG(mode ? STR_ERROR_CAN_T_RAISE_LAND_HERE : STR_ERROR_CAN_T_LOWER_LAND_HERE));
++}
++
++void CopyPaste::CP_PlaceRail(TileIndex tile, int cmd, uint32 railtype)
++{
++	CP_DoCommand(tile, railtype, cmd, NULL,
++		CMD_BUILD_SINGLE_RAIL | CMD_MSG(STR_ERROR_CAN_T_BUILD_RAILROAD_TRACK)
++	);
++}
++
++void CopyPaste::CP_PlaceSignals(TileIndex tile, Track track, SignalType type, uint direction, bool semaphore)
++{
++	if (IsPbsSignal(type) && direction > 0) direction--;
++	CP_DoCommand(tile, track | (semaphore ? 1 : 0) << 4 | type << 5 | direction << 15, 0, NULL,
++			CMD_BUILD_SIGNALS | CMD_MSG(STR_ERROR_CAN_T_BUILD_SIGNALS_HERE));
++}
++
++void CopyPaste::CP_PlaceRoad(TileIndex tile, uint8 road_bits)
++{
++	CP_DoCommand(tile, road_bits, 0, NULL, CMD_BUILD_ROAD | CMD_MSG(STR_ERROR_CAN_T_BUILD_ROAD_HERE));
++}
++
++void CopyPaste::CP_PlaceRoadStop(TileIndex tile, uint8 direction, uint8 roadtype, bool truck_stop, bool drive_through)
++{
++	CP_DoCommand(tile, direction, truck_stop | drive_through << 1 | roadtype << 2 | INVALID_STATION << 16, NULL, CMD_BUILD_ROAD_STOP | CMD_MSG(truck_stop ? STR_ERROR_CAN_T_BUILD_TRUCK_STATION : STR_ERROR_CAN_T_BUILD_BUS_STATION));
++}
++
++void CopyPaste::CP_PlaceRail_Tunnel(TileIndex tile, uint32 railtype)
++{
++	CP_DoCommand(tile, railtype, 0, NULL,
++		CMD_BUILD_TUNNEL | CMD_MSG(STR_ERROR_CAN_T_BUILD_TUNNEL_HERE));
++}
++
++void CopyPaste::CP_PlaceRoad_Tunnel(TileIndex tile, uint8 roadtype)
++{
++	CP_DoCommand(tile, 0x200 | roadtype, 0, NULL, CMD_BUILD_TUNNEL | CMD_MSG(STR_ERROR_CAN_T_BUILD_TUNNEL_HERE));
++}
++
++void CopyPaste::CP_Build_Bridge(TileIndex start, TileIndex end, uint8 bridgetype, uint8 transport_type, uint8 rail_road_type)
++{
++	CP_DoCommand(end, start,
++		bridgetype | (rail_road_type << 8) | (transport_type << 15), NULL,
++		CMD_BUILD_BRIDGE | CMD_MSG(STR_ERROR_CAN_T_BUILD_BRIDGE_HERE));
++}
++
++void CopyPaste::CP_PlaceRail_Depot(TileIndex tile, uint8 railtype, uint8 direction)
++{
++	CP_DoCommand(tile, railtype, direction, NULL,
++		CMD_BUILD_TRAIN_DEPOT | CMD_MSG(STR_ERROR_CAN_T_BUILD_TRAIN_DEPOT));
++}
++
++void CopyPaste::CP_PlaceRoad_Depot(TileIndex tile, uint8 direction_type)
++{
++	CP_DoCommand(tile, direction_type, 0, NULL,
++		CMD_BUILD_ROAD_DEPOT | CMD_MSG(STR_ERROR_CAN_T_BUILD_ROAD_HERE));
++}
++
++void CopyPaste::CP_PlaceWaypoint(TileIndex tile, uint8 waypoint_type)
++{
++	CP_DoCommand(tile, waypoint_type, 0, NULL, CMD_BUILD_RAIL_WAYPOINT | CMD_MSG(STR_ERROR_CAN_T_BUILD_TRAIN_WAYPOINT));
++}
++
++void CopyPaste::CP_ClearTile(TileIndex start_tile, TileIndex end_tile)
++{
++	CP_DoCommand(start_tile, end_tile, 0, NULL, CMD_CLEAR_AREA | CMD_MSG(STR_ERROR_CAN_T_CLEAR_THIS_AREA));
++}
++
++uint8 CopyPaste::MirrorSignalDirection(uint8 direction)
++{
++	if (direction == 0) return direction;
++	return (direction == 1 ? 2 : 1);
++}
++
++DisallowedRoadDirections CopyPaste::MirrorOneWayRoadDirection(DisallowedRoadDirections drd)
++{
++	if (drd == DRD_NONE || drd == DRD_BOTH) return drd;
++	return drd == DRD_SOUTHBOUND ? DRD_NORTHBOUND : DRD_SOUTHBOUND;
++}
++
++void CopyPaste::SwapSignalInfo(uint index)
++{
++	uint16 signal = m_signals[index];
++	/* Clear bit 2-16 */
++	for (uint i = 2; i < 16; i++)
++		ClrBit(m_signals[index], i);
++	/* Set bit 2 to former 3 */
++	SB(m_signals[index], 2, 1, GB(signal, 3, 1));
++	/* Set bit 3 to former 2 */
++	SB(m_signals[index], 3, 1, GB(signal, 2, 1));
++	/* Set bit 6+7 to former 8+9 */
++	SB(m_signals[index], 6, 2, MirrorSignalDirection(GB(signal, 8, 2)));
++	/* Set bit 8+9 to former 6+7 */
++	SB(m_signals[index], 8, 2, MirrorSignalDirection(GB(signal, 6, 2)));
++	/* Exchange signal types too */
++	/* Set bit 10-12 to former 13-15 */
++	SB(m_signals[index], 10, 3, GB(signal, 13, 3));
++	/* Set bit 13-15 to former 10-12 */
++	SB(m_signals[index], 13, 3, GB(signal, 10, 3));
++}
++
++/** This function pastes landscape */
++void CopyPaste::PasteLandscape(TileIndex tile)
++{
++	TileIndex sx = TileX(tile);
++	TileIndex sy = TileY(tile);
++	uint size_x = GetWidth();
++	uint size_y = GetHeight();
++	int8 count, h_diff;
++	uint h_tile;
++
++	TileIndex index;
++	/* Base height level is from upper right tile. */
++	uint baseh = TileHeight(tile);
++	/* Bulldoze tiles which will be built on */
++	if (m_clear_before_build) {
++		index = 0;
++		TILE_LOOP(tile, size_x - 1, size_y - 1, TileXY(sx, sy)) {
++
++			if (GetCPTileType(index) != CP_TILE_CLEAR) {
++				CP_ClearTile(tile, tile);
++			}
++			index++;
++
++		}
++	}
++
++	/* Check if we want to restore any terrain at all */
++	if (m_paste_vacant_terrain > 0) {
++		/* Restore terrain 
++		 * Please look into "CopyArea" for details on which bit is used for which information
++		 */
++		index = 0;
++		TILE_LOOP(tile, size_x, size_y, TileXY(sx, sy)) {
++
++			if (HasBit(m_terrain_needed[index], 0) || (m_paste_vacant_terrain == 2)) {
++
++				/* Do special heightlevel calculations if we are networking,
++				 * since we cannot measure the heightlevel if we delay the execution.
++				 * Lowering/Raising land affects neighbour tiles too...
++				 * Else we just use the current tileheight we get from the map.
++				 */
++#ifdef ENABLE_NETWORK
++				if (_networking) {
++					h_tile = TileHeight(tile);
++					if ((cur_h != size_y) && (cur_w != size_x)) {
++						/* Look NE and NW */
++						h_tile = ClampToRight(index, baseh, h_tile);
++						h_tile = ClampToUp(index, baseh, h_tile, size_x);
++						/* use clamped height instead of actual height */
++						h_diff = GetHeight(baseh, index) - h_tile;
++					}
++					else {
++						if ((cur_h == size_y) && (cur_w == size_x)) {
++							/* First Tile is always at baseh */
++							h_diff = GetHeight(baseh, index) - TileHeight(tile);
++						}
++						else if (cur_w == size_x) {
++							/* Right Border, clamp to upper tile only */
++							h_tile = ClampToUp(index, baseh, h_tile, size_x);
++							h_diff = GetHeight(baseh, index) - h_tile;
++						}
++						else {
++							/* Upper Border, clamp to right tile only */
++							h_tile = ClampToRight(index, baseh, h_tile);
++							h_diff = GetHeight(baseh, index) - h_tile;
++						}
++					}
++				}
++				else
++#endif /* ENABLE_NETWORK */
++					h_diff = GetHeight(baseh, index) - TileHeight(tile);
++
++				/* Now raise/lower the tile according to our calculations */
++				if (h_diff > 0)	{
++					for (count = 0; count < h_diff; count++)
++						CP_RaiseLowerLand(tile, 1);
++				}
++				else if (h_diff < 0) {
++					for (count = h_diff; count < 0; count++)
++						CP_RaiseLowerLand(tile, 0);
++				}
++			}
++			index++;
++
++		}
++	}
++
++}
++
++/** This function pastes signals for a given index */
++void CopyPaste::PasteSignals(uint index, TileIndex tile)
++{
++	uint16 signal = m_signals[index];
++	if (m_toggle_signal_direction) {
++		SB(signal, 6, 2, MirrorSignalDirection(GB(signal, 6, 2)));
++		SB(signal, 8, 2, MirrorSignalDirection(GB(signal, 8, 2)));
++	}
++	bool firstrun = true;
++	for (Track t = TRACK_BEGIN; t < TRACK_END; t++) {
++		if (m_railroad[index] & TrackToTrackBits(t)) {
++			if (((IsDiagonalTrack(t) || t == TRACK_LEFT || t == TRACK_UPPER) &&
++				HasBit(signal, 0)) ||
++				((t == TRACK_RIGHT || t == TRACK_LOWER) && HasBit(signal, 1))) {
++				CP_PlaceSignals(tile, t, 
++					(SignalType)GB(signal, firstrun ? 10 : 13, 3),
++					GB(signal, firstrun ? 6 : 8, 2),
++					HasBit(signal, firstrun ? 2 : 3));
++					firstrun = false;
++			}
++		}
++	}
++}
++
++/** This function calculates the height,
++ * the given tile will have, after the neighbour(right) tile is restored.
++ * In OTTD adjacent tiles may only differ in height by 1 level.
++ */
++int8 CopyPaste::ClampToRight(TileIndex index, int8 baseh, int8 h_tile)
++{
++	int8 h_right = GetHeight(baseh, index - 1);
++
++	if (h_tile > (h_right + 1)) {
++		h_tile = h_right + 1;
++	}
++	else if (h_tile < (h_right - 1)) {
++		h_tile = h_right - 1;
++	}
++
++	return h_tile;
++}
++
++/** This function calculates the height,
++ * the given tile will have, after the neighbour(upper) tile is restored.
++ * In OTTD adjacent tiles may only differ in height by 1 level.
++ */
++int8 CopyPaste::ClampToUp(TileIndex index, int8 baseh, int8 h_tile, int32 size_x)
++{
++	int8 h_up = GetHeight(baseh, index - size_x);
++
++	if (h_tile > (h_up + 1)) {
++		h_tile = h_up + 1;
++	}
++	else if (h_tile < (h_up - 1)) {
++		h_tile = h_up - 1;
++	}
++
++	return h_tile;
++}
++
++/** Game command which pastes the copied content.
++ * The result depends on setting some variables:
++ * m_paste_vacant_terrain, m_convert_rail, m_clear_before_build and m_toggle_signal_direction
++ * @param tile upper right corner to paste to
++ */
++void CopyPaste::internal_PasteArea(TileIndex tile)
++{
++	int8 baseh;
++	TileIndex index = 0;
++	int32 size_x, size_y;
++	bool success = true;
++	TileIndex sx = TileX(tile);
++	TileIndex sy = TileY(tile);
++	TileIndex ex = sx + GetWidth();
++	TileIndex ey = sy + GetHeight();
++
++	/* Reset paste costs */
++	if (_shift_pressed) {
++		m_costs.MultiplyCost(0);
++	}
++
++	/* Nothing copied? exit... */
++	if (! IsSomethingCopied()) return;
++	
++	/* Paste out of map? exit... */
++	if ((ex >= MapSizeX()) || (ey >= MapSizeY())) return;
++
++	size_x = GetWidth();
++	size_y = GetHeight();
++
++	/* Base height level is from upper right tile. */
++	baseh = (int8)TileHeight(tile);
++	
++	/* Restore the landscape */
++	PasteLandscape(tile);
++	
++	/* Paste Rail, Depot, Tunnel, Road, Bridge: 
++	 * Please look into "CopyArea" for details on which bit is used for which information
++	 */
++	index = 0;
++	TILE_LOOP(tile, size_x - 1, size_y - 1, TileXY(sx, sy)) {
++	
++		uint minortt = GetCPMinorTileType(index);
++
++		switch(GetCPTileType(index)) {
++			case CP_TILE_RAIL: {
++				uint rt = GB(m_railroad[index], 6, 2); //railtype
++				switch (minortt) {
++					case RAIL_TILE_NORMAL:
++					case RAIL_TILE_SIGNALS:
++//					case RAIL_TILE_WAYPOINT:
++						for (Track t = TRACK_BEGIN; t < TRACK_END; t++) {
++							if (m_railroad[index] & TrackToTrackBits(t)) CP_PlaceRail(tile, t, m_convert_rail ? (uint)_cur_railtype : rt);
++						}
++						break;
++
++					case RAIL_TILE_DEPOT:
++						CP_PlaceRail_Depot(tile, m_convert_rail ? (uint)_cur_railtype : rt, GB(m_railroad[index], 0, 2));
++						break;
++				}
++			} break;
++			case CP_TILE_ROAD: {
++				switch(minortt) {
++					case ROAD_TILE_CROSSING:
++						CP_PlaceRail(tile, GB(m_railroad[index], 0, 4) == ROAD_X ? TRACK_Y : TRACK_X, m_convert_rail ? (uint)_cur_railtype : GB(m_signals[index], 4, 2));
++					/* fallthrough */
++					case ROAD_TILE_NORMAL:
++						if (GB(m_railroad[index], 0, 4) > 0) CP_PlaceRoad(tile, GB(m_railroad[index], 0, 4) | (ROADTYPE_ROAD << 4) | (minortt == ROAD_TILE_NORMAL ? (GB(m_signals[index], 0, 2) << 6) : 0));
++						if (GB(m_railroad[index], 4, 4) > 0) CP_PlaceRoad(tile, GB(m_railroad[index], 4, 4) | (ROADTYPE_TRAM << 4));
++						break;
++					case ROAD_TILE_DEPOT:
++						CP_PlaceRoad_Depot(tile, GB(m_railroad[index], 0, 2) | HasBit(m_railroad[index], 2) << 2);
++						break;
++				}
++			} break;
++			case CP_TILE_STATION: 
++				switch(minortt) {
++					case CP_TILE_ROAD:
++						CP_PlaceRoadStop(tile, GB(m_railroad[index], 0, 2), GB(m_railroad[index], 6, 2), HasBit(m_railroad[index], 2), HasBit(m_railroad[index], 3));
++				}
++
++
++			case CP_TILE_TUNNELBRIDGE:
++				if (HasBit(minortt, 0)) {
++					/* Tunnels: 
++					* TODO: check if tunnel end will be at right place (=inside area)
++					* Same check as bridge? move into tunneldir, until tunneltile reached
++					*/
++					if (HasBit(m_railroad[index], 4)) {
++						if (GB(m_railroad[index], 2, 2) == TRANSPORT_ROAD) {
++							CP_PlaceRoad_Tunnel(tile, GB(m_railroad[index], 6, 2));
++						} else {
++							CP_PlaceRail_Tunnel(tile, m_convert_rail ? (uint) _cur_railtype : GB(m_railroad[index], 6, 2));
++						}
++					}
++				} else if (HasBit(m_railroad[index], 4)) {
++					/* Bridges: */
++					/* If we get here, there is a bridge start here. Now find the bridge end 
++					 * TODO Shorten code by setting up variables inside switch statement, and use them inside one loop at the end
++					 */
++					bool bridge_error = false;
++					TileIndex tmp_tile = tile;
++					uint rdd = ReverseDiagDir((DiagDirection)GB(m_railroad[index], 0, 2));
++					bool found = false;
++					TileIndex i;
++					switch (GB(m_railroad[index], 0, 2)) {
++						case DIAGDIR_NE:
++							/* -X */
++							i = 1;
++							while ((TileX(tile) - i) >= sx) {
++								if (GetCPTileType(index - i) == CP_TILE_TUNNELBRIDGE && 
++									!HasBit(GetCPMinorTileType(index - i), 0) &&
++									!HasBit(m_railroad[index - i], 4) &&
++									GB(m_railroad[index - i], 0, 2) == rdd) {
++									found = true;
++									break;
++								}
++								i++;
++							}
++							if ((TileX(tile) - i) < sx || !found)
++								bridge_error = true;
++							else
++								tmp_tile += TileDiffXY(0 - i, 0);
++							break;
++						case DIAGDIR_SW:
++							/* +X */
++							i = 1;
++							while ((TileX(tile) + i) < (sx + size_x - 1)) {
++								if (GetCPTileType(index + i) == CP_TILE_TUNNELBRIDGE && !HasBit(GetCPMinorTileType(index + i), 0) && !HasBit(m_railroad[index + i], 4) && GB(m_railroad[index + i], 0, 2) == rdd) {
++									found = true;
++									break;
++								}
++								i++;
++							}
++							if ((TileX(tile) + i) >= (sx + size_x - 1) || !found)
++								bridge_error = true;
++							else
++								tmp_tile += TileDiffXY(+i, 0);
++							break;
++						case DIAGDIR_SE:
++							/* +Y */
++							i = 1;
++							while ((TileY(tile) + i) < (sy + size_y - 1)) {
++								if (GetCPTileType(index + (i * (size_x - 1))) == CP_TILE_TUNNELBRIDGE && !HasBit(GetCPMinorTileType(index + (i * (size_x - 1))), 0) && !HasBit(m_railroad[index + (i * (size_x - 1))], 4) && GB(m_railroad[index + (i * (size_x - 1))], 0, 2) == rdd) {
++									found = true;
++									break;
++								}
++								i++;
++							}
++							if ((TileY(tile) + i) >= (sy + size_y - 1) || !found)
++								bridge_error = true;
++							else
++								tmp_tile += TileDiffXY(0, +i);
++							break;
++						case DIAGDIR_NW:
++							/* -Y */
++							i = 1;
++							while ((TileY(tile) + i) >= (sy + size_y - 1)) {
++								if (GetCPTileType(index - (i * (size_x - 1))) == CP_TILE_TUNNELBRIDGE && !HasBit(GetCPMinorTileType(index - (i * (size_x - 1))), 0) && !HasBit(m_railroad[index - (i * (size_x - 1))], 4) && GB(m_railroad[index - (i * (size_x - 1))], 0, 2) == rdd) {
++									found = true;
++									break;
++								}
++								i++;
++							}
++							if ((TileY(tile) - i) < sy || !found)
++								bridge_error = true;
++							else
++								tmp_tile += TileDiffXY(0, 0 - i);
++							break;
++					}
++					if (!bridge_error) {
++						if (GB(m_railroad[index], 2, 2) == TRANSPORT_RAIL) {
++							CP_Build_Bridge(tile, tmp_tile, m_convert_rail ? GetFastestAvailableBridgeType(GetTunnelBridgeLength(tile, tmp_tile)) : m_signals[index], TRANSPORT_RAIL, m_convert_rail ? (uint) _cur_railtype : ((m_railroad[index] >> 6) & 3U) );
++						} else {
++							CP_Build_Bridge(tile, tmp_tile, m_convert_rail ? GetFastestAvailableBridgeType(GetTunnelBridgeLength(tile, tmp_tile)) : m_signals[index], TRANSPORT_ROAD, ((m_railroad[index] >> 6) & 3U) );
++						}
++					}
++				}
++				break;
++			default: break;
++		}
++
++		index++;
++
++	}
++
++	/* Restore Signals and Waypoints (separated because they depend on underlying track) */
++	index = 0;
++	TILE_LOOP(tile, size_x - 1, size_y - 1, TileXY(sx, sy)) {
++		if (GetCPTileType(index) == CP_TILE_RAIL) {
++			switch(GetCPMinorTileType(index)) {
++/*				case RAIL_TILE_WAYPOINT:
++					CP_PlaceWaypoint(tile, GB(m_signals[index], 0, 8));
++					break;*/
++				case RAIL_TILE_SIGNALS:
++					PasteSignals(index, tile);
++			}
++		}
++		index++;
++	}
++
++
++	/* If shift is pressed, show the cost estimate. Else play a sound on success */
++	if (_shift_pressed) {
++		ShowEstimatedCostOrIncome(m_costs.GetCost(), 100, 100);
++	}
++	else {
++		if (success) SndPlayTileFx(SND_1F_SPLAT, tile);
++	}
++}
++
++/**
++ * Safe Paste Command. 
++ * Checks CommandQueue-Size in network games
++ **/
++void CopyPaste::PasteArea(TileIndex tile)
++{
++	if (_settings_client.gui.cp_paste_speed != 0xFF) {
++		this->internal_PasteArea(tile);
++	}
++	else {
++		ShowErrorMessage(STR_COPY_PASTE_PASTE_DISABLED, INVALID_STRING_ID, WL_ERROR, TileX(tile) * TILE_SIZE, TileY(tile) * TILE_SIZE);
++	}
++}
++
++/**
++ * Indicates this tile needs to be terraformed, in order to restore some building.
++ * Bit 0 indicates this tile is needed for terraforming,
++ * but is not directly build on.
++ * Bit 1 indicates this tile is beeing built on.
++ **/
++void CopyPaste::TerrainNeededAroundTile(TileIndex tindex, TileIndex bindex)
++{
++	/* always restore terrain on this tiles */
++	SetBit(m_terrain_needed[tindex], 0);
++	SetBit(m_terrain_needed[tindex + 1], 0);
++	SetBit(m_terrain_needed[tindex + GetWidth()], 0);
++	SetBit(m_terrain_needed[tindex + GetWidth() + 1], 0);
++}
++
++/**
++ * Game command which copies a selected area
++ **/
++void CopyPaste::CopyArea(TileIndex end, TileIndex start)
++{
++	int8 baseh;
++	TileIndex tindex = 0;
++	TileIndex bindex = 0;
++	int size_x, size_y;
++	bool success = false;
++	TileIndex sx = TileX(start);
++	TileIndex sy = TileY(start);
++	TileIndex ex = TileX(end);
++	TileIndex ey = TileY(end);
++	bool tunnelbridge_error;
++	int32 maxdiff, i;
++
++
++	if (ex < sx) Swap(ex, sx);
++	if (ey < sy) Swap(ey, sy);
++	/* add one tile, but just for heightmap */
++	ex++;
++	ey++;
++	size_x = (ex - sx) + 1;
++	size_y = (ey - sy) + 1;
++
++	this->AllocateMapArray(size_x * size_y);
++	SetWidth(size_x);
++	SetHeight(size_y);
++
++	/* Create a command DIFF to a flat Area */
++	/* Base level is from first tile. */
++	baseh = (int8)TileHeight(TileXY(sx, sy));
++	tindex = 0;
++	TILE_LOOP(tile, size_x, size_y, TileXY(sx, sy)) {
++
++		m_heightmap[tindex] = ((int8)TileHeight(tile)) - baseh;
++		tindex++;
++
++		/* Dont Copy tracks/buildings on last x/y row */
++		if (cur_h == 1 || cur_w == 1) {
++			success = true;
++			continue;
++		}
++
++		/* Copy building/track here */
++		switch (GetTileType(tile)) {
++			case MP_RAILWAY:
++				/* Check if we want to copy this type of building */
++				if (!m_copy_with_rail) break;
++				if (!(m_copy_with_other || IsTileOwner(tile, _current_company))) break;
++				SB(m_tiletype[bindex], 0, 4, CP_TILE_RAIL);
++				SB(m_tiletype[bindex], 4, 4, GetRailTileType(tile));
++				TerrainNeededAroundTile(tindex - 1, bindex);
++				
++				/* Store Railway type in bits 6+7 */
++				SB(m_railroad[bindex], 6, 2, GetRailType(tile));
++				
++				switch (GetRailTileType(tile)) {
++					case RAIL_TILE_DEPOT:
++						/* Depot here */
++						/* store direction: bit 2+3 */
++						SB(m_railroad[bindex], 0, 2, GetDepotDirection(tile, TRANSPORT_RAIL));
++						break;
++/*					case RAIL_TILE_WAYPOINT:
++						// Waypoint here
++						// Store Waypoint custom gfx id
++						SB(m_signals[bindex], 0, 8, GetWaypointByTile(tile)->stat_id);
++						// Store axis
++						SB(m_railroad[bindex], 0, 2, AxisToTrackBits(GetWaypointAxis(tile)));
++						break;*/
++					case RAIL_TILE_SIGNALS: {
++						/* Signals: */
++						/* Store Signal:
++						 * Bit      0 : signal 1 present
++						 * Bit      1 : signal 2 present
++						 * Bit      2 : variant S1
++						 * Bit      3 : variant S2
++						 * Bits: 6- 7 : Direction S1 (Clicks to build)
++						 * Bits: 8- 9 : Direction S2 (Clicks to build)
++						 * Bits: 10-12: signal type S1
++						 * Bits: 13-15: signal type S2
++						 */
++						bool first_run = true;
++						for (Track t = TRACK_BEGIN; t < TRACK_END; t++) {
++							if (HasTrack(tile, t) && HasSignalOnTrack(tile, t)) {
++								if (t == TRACK_X || t == TRACK_Y || t == TRACK_LEFT || t == TRACK_UPPER) {
++									SetBit(m_signals[bindex], 0);
++								} else {
++									SetBit(m_signals[bindex], 1);
++								}
++								/* Store signal direction */
++								Trackdir td = TrackToTrackdir(t);
++								if (!(HasSignalOnTrackdir(tile, td) && HasSignalOnTrackdir(tile, ReverseTrackdir(td)))) {
++									/* one way signal, not 2-way */
++									if (t == TRACK_LEFT || t == TRACK_RIGHT) td = ReverseTrackdir(td);
++									SB(m_signals[bindex], first_run ? 6 : 8, 2, HasSignalOnTrackdir(tile, td) ? 1 : 2);
++								}
++								/* Bit 2/3: signal variant(semaphore/electric) ToDo: find some place this can live with another one */
++								SB(m_signals[bindex], first_run ? 2 : 3, 1, GetSignalVariant(tile, t));
++								/* Bits 10 - 12/13-15: signal type */
++								SB(m_signals[bindex], first_run ? 10 : 13, 3, GetSignalType(tile, t));
++								first_run = false;
++							}
++						}
++					}
++					/* fallthrough */
++					case RAIL_TILE_NORMAL:
++						/* Store Railway tracks in bits 0 to 5: */
++						m_railroad[bindex] |= GetTrackBits(tile);
++						break;
++				}
++
++				break;
++			case MP_ROAD:
++				if (GetRoadTileType(tile) != ROAD_TILE_CROSSING && (!m_copy_with_road || !(m_copy_with_other || IsTileOwner(tile, _current_company)))) break;
++				SB(m_tiletype[bindex], 0, 4, CP_TILE_ROAD);
++				SB(m_tiletype[bindex], 4, 4, GetRoadTileType(tile));
++				switch (GetRoadTileType(tile)) {
++					case ROAD_TILE_CROSSING: {
++						/* Crossing: Get Axis, store railtype too 
++						 * TODO Unify...
++						 */
++						RoadBits roadbits = GetCrossingRoadBits(tile);
++						Track railtrack = GetCrossingRailTrack(tile);
++						bool should_copy_rail = m_copy_with_rail && (m_copy_with_other || IsTileOwner(tile, _current_company));
++						bool should_copy_road = m_copy_with_road;
++						if (should_copy_rail && !should_copy_road) {
++							SB(m_tiletype[bindex], 0, 4, CP_TILE_RAIL);
++							SB(m_tiletype[bindex], 4, 4, RAIL_TILE_NORMAL);
++							TerrainNeededAroundTile(tindex - 1, bindex);
++							/* Copy the rail */
++							m_railroad[bindex] |= TrackToTrackBits(railtrack);
++							SB(m_railroad[bindex], 6, 2, GetRailType(tile));
++						}
++						if (should_copy_road && !should_copy_rail) {
++							SB(m_tiletype[bindex], 4, 4, ROAD_TILE_NORMAL);
++						}
++						if (should_copy_road && should_copy_rail) {
++							SB(m_signals[bindex], 4, 2, GetRailType(tile));
++						}
++						if (should_copy_road) {
++							/* Copy the road */
++							for (RoadType rt = ROADTYPE_BEGIN; rt < ROADTYPE_END; rt++) {
++								if ((m_copy_with_other || GetRoadOwner(tile, rt) == _current_company) && GetRoadTypes(tile) & RoadTypeToRoadTypes(rt)) {
++									TerrainNeededAroundTile(tindex - 1, bindex);
++									SB(m_railroad[bindex], rt * 4, 4, roadbits);
++								}
++							}
++						}
++						if (!should_copy_road && !should_copy_rail) {
++							SB(m_tiletype[bindex], 0, 4, CP_TILE_CLEAR);
++						}
++						} break;
++
++					case ROAD_TILE_DEPOT:
++						/* Direction: bit 0+1 */
++						SB(m_railroad[bindex], 0, 2, GetDepotDirection(tile, TRANSPORT_ROAD));
++						/* Tram or Road? bit 2 */
++						if (GetRoadTypes(tile) != ROADTYPES_ROAD) SetBit(m_railroad[bindex], 2);
++						TerrainNeededAroundTile(tindex - 1, bindex);
++						break;
++
++					case ROAD_TILE_NORMAL:
++						for (RoadType rt = ROADTYPE_BEGIN; rt < ROADTYPE_END; rt++) {
++							SB(m_railroad[bindex], rt * 4, 4, GetRoadBits(tile, rt));
++						}
++						TerrainNeededAroundTile(tindex - 1, bindex);
++						SB(m_signals[bindex], 0, 2, GetDisallowedRoadDirections(tile));
++						break;
++				}
++				break;
++
++			case MP_STATION:
++				/* Stations: currently partially supported */
++				SB(m_tiletype[bindex], 0, 4, CP_TILE_STATION);
++
++			
++				switch (GetStationType(tile)) {
++					/* Road stations */
++					case STATION_TRUCK:
++					case STATION_BUS:
++						SB(m_tiletype[bindex], 4, 4, CP_TILE_ROAD);
++
++						SB(m_railroad[bindex], 0, 2, GetRoadStopDir(tile));
++						if(GetStationType(tile) == STATION_TRUCK) SetBit(m_railroad[bindex], 2);
++						SB(m_railroad[bindex], 3, 1, IsDriveThroughStopTile(tile));
++						SB(m_railroad[bindex], 6, 2, GetRoadTypes(tile));
++						break;					
++	
++					/* Rail stations */
++					case STATION_RAIL:
++						SB(m_tiletype[bindex], 4, 4, CP_TILE_RAIL);
++
++						//GetStationSpec for newgrf info
++						break;
++
++					default:
++						/* Not reached */
++						break;
++
++				}
++				break;
++
++			case MP_TUNNELBRIDGE:
++				/* Check for tunnel or bridge 
++				 * TODO Try to unify bridges an tunnels, since error checking(start/endtile) is essentially the same
++				 */
++				if (IsTunnelTile(tile)) {
++					/* Storing Tunnel */
++					if (!m_copy_with_rail && (GetTunnelBridgeTransportType(tile) == TRANSPORT_RAIL)) break;
++					if (!m_copy_with_road && (GetTunnelBridgeTransportType(tile) == TRANSPORT_ROAD)) break;
++					if (!(m_copy_with_other || IsTileOwner(tile, _current_company))) break;
++					tunnelbridge_error = false;
++					if ((GetTunnelBridgeDirection(tile) == DIAGDIR_SW) || (GetTunnelBridgeDirection(tile) == DIAGDIR_SE)) {
++						int tilediff = 1;
++						/* Store tunnel direction in bit 0-1 */
++						SB(m_railroad[bindex], 0, 2, GetTunnelBridgeDirection(tile));
++						/* Store tunnel transport type in bit 2-3 */
++						SB(m_railroad[bindex], 2, 2, GetTunnelBridgeTransportType(tile));
++						/* Store tunnel start in bit 4 */
++						SetBit(m_railroad[bindex], 4);
++						/* Store rail type too, if it is a railtunnel */
++						if (GetTunnelBridgeTransportType(tile) == TRANSPORT_RAIL)
++							m_railroad[bindex] |= (GetRailType(tile) << 6);
++						if (GetTunnelBridgeTransportType(tile) == TRANSPORT_ROAD)
++							m_railroad[bindex] |= (GetRoadTypes(tile) << 6);
++						/* Now mark all tiles between tunnel start and end as needed 
++						 * TODO Unify... ;)
++						 */
++						switch (GetTunnelBridgeDirection(tile)) {
++							case DIAGDIR_SW:
++								maxdiff = (size_x - 1) - (bindex % (size_x - 1)) - 1;
++								if (maxdiff <= 0) {
++									tunnelbridge_error = true;
++									break;
++								}
++								while ((!IsTunnelTile(tile + TileDiffXY(tilediff, 0))) && (tilediff <= maxdiff)) { //InsideSelection, tunnelEndnotfound
++									tilediff++;
++								}
++								if ((!IsTunnelTile(tile + TileDiffXY(tilediff, 0))) || (tilediff > maxdiff))
++									tunnelbridge_error = true;
++								if (!tunnelbridge_error) {
++									/* Mark Tiles as needed: */
++									for (i = 0; i <= tilediff; i++)
++										TerrainNeededAroundTile(tindex - 1 + i, bindex + i);
++
++									/* Set other TunnelEnd */
++									SB(m_tiletype[bindex + tilediff], 0, 4, CP_TILE_TUNNELBRIDGE);
++									SB(m_tiletype[bindex + tilediff], 4, 1, true);
++									/* Store tunnel direction in bit 1-2 */
++									m_railroad[bindex + tilediff] |= GetTunnelBridgeDirection(tile + TileDiffXY(tilediff, 0));
++									/* Store tunnel transport type in bit 3 */
++									SB(m_railroad[bindex + tilediff], 2, 2, GetTunnelBridgeTransportType(tile + TileDiffXY(tilediff, 0)));
++									/* Store tunnel start in bit 4 (No, this is tunnel End) */
++									/* Store rail type too, if railtunnel */
++									if (GetTunnelBridgeTransportType(tile + TileDiffXY(tilediff, 0)) == TRANSPORT_RAIL)
++										m_railroad[bindex + tilediff] = (GetRailType(tile + TileDiffXY(tilediff, 0)) << 6);
++								}
++								break;
++							case DIAGDIR_SE:
++								maxdiff = (size_y - 1) - (bindex / (size_x - 1)) - 1;
++								if (maxdiff <= 0) {
++									tunnelbridge_error = true;
++									break;
++								}
++								while ((!IsTunnelTile(tile + TileDiffXY(0, tilediff))) && (tilediff <= maxdiff)) { //InsideSelection, tunnelEndnotfound
++									tilediff++;
++								}
++								if ((!IsTunnelTile(tile + TileDiffXY(0, tilediff))) || (tilediff > maxdiff))
++									tunnelbridge_error = true;
++								if (!tunnelbridge_error) {
++									/* Mark Tiles as needed: */
++									for (i = 0; i <= tilediff; i++)
++										TerrainNeededAroundTile(tindex - 1 + (i * size_x), bindex + (i * (size_x - 1)));
++
++									/* Set other TunnelEnd */
++									SB(m_tiletype[bindex + tilediff * (size_x - 1)], 0, 4, CP_TILE_TUNNELBRIDGE);
++									SB(m_tiletype[bindex + tilediff * (size_x - 1)], 4, 1, true);
++									/* Store tunnel direction in bit 0-1 */
++									m_railroad[bindex + (tilediff * (size_x - 1))] |= GetTunnelBridgeDirection(tile + TileDiffXY(0, tilediff));
++									/* Store tunnel transport type in bit 3 */
++									SB(m_railroad[bindex + tilediff * (size_x - 1)], 2, 2, GetTunnelBridgeTransportType(tile + TileDiffXY(0, tilediff)));
++									/* Store tunnel start in bit 4 (No, this is tunnel End) */
++									/* Store rail type too, if railtunnel */
++									if (GetTunnelBridgeTransportType(tile + TileDiffXY(0, tilediff)) == TRANSPORT_RAIL)
++										m_railroad[bindex + (tilediff * (size_x - 1))] |= (GetRailType(tile + TileDiffXY(0, tilediff)) << 6);
++								}
++								break;
++							default:
++							break;
++						}
++						if (tunnelbridge_error) {
++							/* ResetBridge on Error */
++							m_railroad[bindex] = 0;
++						} else {
++							SB(m_tiletype[bindex], 0, 4, CP_TILE_TUNNELBRIDGE);
++							SB(m_tiletype[bindex], 4, 1, IsTunnelTile(tile));
++						}
++					}
++					else {
++						/* Other directions: do nothing since we have everything copied already */
++					}
++				}
++				else {
++					/* Store bridge (Has to be in "else", since Tunnel is a "BridgeRamp" too) */
++					if (IsBridge(tile)) {
++						if (!m_copy_with_rail && (GetTunnelBridgeTransportType(tile) == TRANSPORT_RAIL)) break;
++						if (!m_copy_with_road && (GetTunnelBridgeTransportType(tile) == TRANSPORT_ROAD)) break;
++						if (!(m_copy_with_other || IsTileOwner(tile, _current_company))) break;
++
++						tunnelbridge_error = false;
++						if ((GetTunnelBridgeDirection(tile) == DIAGDIR_SW) || (GetTunnelBridgeDirection(tile) == DIAGDIR_SE)) {
++							int tilediff = 1;
++							/* Direction bit 0-1 */
++							SB(m_railroad[bindex], 0, 2, GetTunnelBridgeDirection(tile));
++							/* TransportType bit 3 */
++							SB(m_railroad[bindex], 2, 2, GetTunnelBridgeTransportType(tile));
++							/* Store "IsBridge-Start" in Bit4 */
++							SetBit(m_railroad[bindex], 4);
++							/* BridgeType in m_signals */
++							m_signals[bindex] = GetBridgeType(tile);
++							/* Store Railtype */
++							if (GetTunnelBridgeTransportType(tile) == TRANSPORT_RAIL)
++								m_railroad[bindex] |= (GetRailType(tile) << 6);
++							if (GetTunnelBridgeTransportType(tile) == TRANSPORT_ROAD)
++								m_railroad[bindex] |= (GetRoadTypes(tile) << 6);
++							/* Now mark all tiles between bridge start and end as needed 
++							 * TODO: Unify :)
++							 */
++							switch (GetTunnelBridgeDirection(tile)) {
++								TileIndex otherEnd;
++								case DIAGDIR_SW:
++									maxdiff = (size_x - 1) - (bindex % (size_x - 1)) - 1;
++									if (maxdiff <= 0) {
++										tunnelbridge_error = true;
++										break;
++									}
++									otherEnd = GetOtherBridgeEnd(tile);
++									tilediff = DistanceManhattan(tile, otherEnd);
++									if (tilediff > maxdiff)
++										tunnelbridge_error = true;
++									
++									if (!tunnelbridge_error) {
++										/* Mark Tiles as needed: */
++										for (i = 0; i <= tilediff; i++)
++											TerrainNeededAroundTile(tindex - 1 + i, bindex + i);
++
++										/* Set other BridgeEnd */
++										SB(m_tiletype[bindex + tilediff], 0, 4, CP_TILE_TUNNELBRIDGE);
++										SB(m_tiletype[bindex + tilediff], 4, 1, IsTunnelTile(tile));
++										/* Direction bit 0-1 */
++										SB(m_railroad[bindex + tilediff], 0, 2, GetTunnelBridgeDirection(tile + TileDiffXY(tilediff, 0)));
++										/* TransportType bit 3 */
++										SB(m_railroad[bindex + tilediff], 2, 2, GetTunnelBridgeTransportType(tile + TileDiffXY(tilediff, 0)));
++										/* Store "IsBridge-Start" in Bit4 (Nope, this is the Bridge-End) */
++										
++										/* BridgeType in m_signals */
++										m_signals[bindex + tilediff] = GetBridgeType(tile + TileDiffXY(tilediff, 0));
++										/* Store Railtype */
++										if (GetTunnelBridgeTransportType(tile + TileDiffXY(tilediff, 0)) == TRANSPORT_RAIL)
++											m_railroad[bindex + tilediff] |= (GetRailType(tile + TileDiffXY(tilediff, 0)) << 6);
++									}
++									break;
++								case DIAGDIR_SE:
++									maxdiff = (size_y - 1) - (bindex / (size_x - 1)) - 1;
++									if (maxdiff <= 0) {
++										tunnelbridge_error = true;
++										break;
++									}
++									otherEnd = GetOtherBridgeEnd(tile);
++									tilediff = DistanceManhattan(tile, otherEnd);
++									if (tilediff > maxdiff)
++										tunnelbridge_error = true;
++									if (!tunnelbridge_error) {
++										/* Mark Tiles as needed: */
++										for (i = 0; i <= tilediff; i++)
++											TerrainNeededAroundTile(tindex - 1 + (i * size_x), bindex + (i * (size_x - 1)));
++
++										/* Set other BridgeEnd */
++										SB(m_tiletype[bindex + (tilediff * (size_x - 1))], 0, 4, CP_TILE_TUNNELBRIDGE);
++										SB(m_tiletype[bindex + (tilediff * (size_x - 1))], 4, 1, IsTunnelTile(tile));
++										/* Direction bit 0-1 */
++										SB(m_railroad[bindex + tilediff * (size_x - 1)], 0, 2, GetTunnelBridgeDirection(tile + TileDiffXY(0, tilediff)));
++										/* TransportType bit 3 */
++										SB(m_railroad[bindex + tilediff * (size_x - 1)], 2, 2, GetTunnelBridgeTransportType(tile + TileDiffXY(0, tilediff)));
++										/* Store "IsBridge-Start" in Bit4 (Nope, this is the End) */
++										/* BridgeType  in m_signals */
++										m_signals[bindex + tilediff * (size_x - 1)] = GetBridgeType(tile + TileDiffXY(0, tilediff));
++										/* Store Railtype */
++										if (GetTunnelBridgeTransportType(tile + TileDiffXY(0, tilediff)) == TRANSPORT_RAIL)
++											m_railroad[bindex + (tilediff * (size_x - 1))] |= (GetRailType(tile + TileDiffXY(0, tilediff)) << 6);
++									}
++									break;
++								default:
++									break;
++							}
++							if (tunnelbridge_error) {
++								/* ResetBridge on Error */
++								m_railroad[bindex] = 0;
++								m_signals[bindex] = 0;
++							} else {
++								SB(m_tiletype[bindex], 0, 4, CP_TILE_TUNNELBRIDGE);
++								SB(m_tiletype[bindex], 4, 1, IsTunnelTile(tile));
++							}
++						}
++						else {
++							/* Other directions, do nothing, since we have copied everything already */
++						}
++					}
++				}
++				break;
++
++			default:
++				SB(m_tiletype[bindex], 0, 4, CP_TILE_CLEAR);
++				/* Storing nothing */
++				break;
++		}
++		bindex++;
++		success = true;
++
++	}
++
++	if (success) SndPlayTileFx(SND_1F_SPLAT, end);
++}
++
++/* Get the height of a tile */
++uint CopyPaste::GetHeight(uint baseh, uint index)
++{
++	return baseh + m_heightmap[index];
++}
++
++Slope CopyPaste::GetSlope(uint index)
++{
++	int a = m_heightmap[index];
++	int min = a;
++	int b = m_heightmap[index + 1];
++	if (min > b) min = b;
++	int c = m_heightmap[index + GetWidth()];
++	if (min > c) min = c;
++	int d = m_heightmap[index + GetWidth() + 1];
++	if (min > d) min = d;
++	
++	uint r = SLOPE_FLAT;
++	
++	if (a -= min != 0) r += (--a << 4) + SLOPE_N;
++	if (c -= min != 0) r += (--c << 4) + SLOPE_E;
++	if (d -= min != 0) r += (--d << 4) + SLOPE_S;
++	if (b -= min != 0) r += (--b << 4) + SLOPE_W;
++	
++	return (Slope)r;
++}
++
++TrackBits CopyPaste::GetCPTrackBits(uint index)
++{
++	if (GetCPTileType(index) == CP_TILE_RAIL) {
++		if (GetCPMinorTileType(index) != RAIL_TILE_DEPOT) return (TrackBits)GB(m_railroad[index], 0, 6);
++	} else if (GetCPTileType(index) == CP_TILE_ROAD) {
++		if (GetCPMinorTileType(index) == ROAD_TILE_CROSSING) return GB(m_railroad[index], 0, 4) == ROAD_X ? TRACK_BIT_Y : TRACK_BIT_X;
++	}
++	return TRACK_BIT_NONE;
++}
++
++/** Get the major tiletype of a tile*/
++CopyPaste::CopyPasteTileType CopyPaste::GetCPTileType(uint index)
++{
++	return (CopyPasteTileType)GB(m_tiletype[index], 0, 4);
++}
++
++/** Get the minor tiletype of a tile*/
++uint CopyPaste::GetCPMinorTileType(uint index)
++{
++	return GB(m_tiletype[index], 4, 4);
++}
++/**
++ * Rotate an array.
++ * @param dir 1: rotate CW
++ *            -1: rotate CCW
++ **/
++template <typename T> 
++static void rotate(T* b, int w, int h, int dir)
++{
++	int i, len, x, y, src, target;
++
++	/* Allocate a temporary array */
++	len = w * h;
++	T* tmp = MallocT<T>(len);
++
++	/* Copy array to new allocated array: */
++	for (i = 0; i < len; i++)
++		tmp[i] = b[i];
++
++	/* Copy rotated values back to original array */
++	if (dir == 1) {
++		for (y = 0; y < h; y++) {
++			for (x = 0; x < w; x++) {
++				/*X index is now the old Y index
++				 * Y index is w - x
++				 */
++				src = (y * w) + x;
++				target = (((w - 1) - x) * h) + y;
++				b[target] = tmp[src];
++			}
++		}
++	}
++	else if (dir == -1) {
++			/* Copy rotated values back to original array */
++			for (y = 0; y < h; y++) {
++				for (x = 0; x < w; x++) {
++					/* X index is now the old Y index
++					 * Y index is w - x
++					 */
++					src = (y * w) + x;
++					target = (x * h) + (h - 1 - y);
++					b[target] = tmp[src];
++				}
++			}
++	}
++
++	/* Release temp array */
++	free(tmp);
++}
++
++/**
++ * Mirror array.
++ * @param axis 0: horizontal
++ *              1: vertical
++ **/
++template <typename T>
++static void mirror(T* b, int w, int h, Axis axis)
++{
++	int x, y;
++
++
++	switch (axis) {
++		case AXIS_X:
++			for (y = 0; y < h; y++) {
++				for (x = 0; x < (w / 2); x++) {
++					Swap<T>(b[x + (y * w)], b[(w - x - 1) + (y * w)]);
++				}
++			}
++		break;
++		case AXIS_Y:
++			for (y = 0; y < (h / 2); y++) {
++				for (x = 0; x < w; x++) {
++					Swap<T>(b[x + (y * w)], b[ x + ((h - y - 1) * w)]);
++				}
++			}
++		break;
++		default: NOT_REACHED();
++	}
++}
++
++/**
++ * Rotates the copied content ClockWise
++ * This is done by first rotating the array indices,
++ * then rotating the field contents
++ **/
++void CopyPaste::RotateSelectionCW()
++{
++	int w = GetWidth() - 1;
++	int h = GetHeight() - 1;
++	uint8 storelocation;
++	int index, len;
++
++	uint8 tmp8;
++	uint16 tmp16;
++
++	/* Rotate array indices */
++	rotate(m_heightmap, GetWidth(), GetHeight(), 1);
++	rotate(m_terrain_needed, GetWidth(), GetHeight(), 1);
++	rotate(m_tiletype, w, h, 1);
++	rotate(m_railroad,   w, h, 1);
++	rotate(m_signals,w, h, 1);
++
++	/* Rotate array content (tracks, depots etc..) */
++	len = w * h;
++	for (index = 0; index < len; index++) {
++
++		switch (GetCPTileType(index)) {
++			case CP_TILE_RAIL:
++				if (GetCPMinorTileType(index) == RAIL_TILE_DEPOT) {
++					/* Depot */
++					SB(m_railroad[index], 0, 2, ChangeDiagDir((DiagDirection)GB(m_railroad[index], 0, 2), DIAGDIRDIFF_90RIGHT));
++					break;
++				}
++				/* Rotate Tracks */
++				/* Copy tracks to temp variable */
++				tmp8 = m_railroad[index];
++				/* Clear Tracks: bits 0-5 */
++				m_railroad[index] &= ~((1 << 6) - 1);
++				/* Copy back + rotate 
++				 * TODO exchange with arithmetic or lookup-table version...shorten...
++				 */
++				if (tmp8 & TRACK_BIT_Y)     m_railroad[index] |= TRACK_BIT_X;
++				if (tmp8 & TRACK_BIT_X)     m_railroad[index] |= TRACK_BIT_Y;
++				if (tmp8 & TRACK_BIT_LEFT)  m_railroad[index] |= TRACK_BIT_UPPER;
++				if (tmp8 & TRACK_BIT_RIGHT) m_railroad[index] |= TRACK_BIT_LOWER;
++				if (tmp8 & TRACK_BIT_LOWER) m_railroad[index] |= TRACK_BIT_LEFT;
++				if (tmp8 & TRACK_BIT_UPPER) m_railroad[index] |= TRACK_BIT_RIGHT;
++				
++				if (GetCPMinorTileType(index) == RAIL_TILE_SIGNALS) {
++					/* Signals */
++					/* copy original signals to temporary variable */
++					tmp16 = m_signals[index];
++					/* Clear Signals: Bits 0-2 */
++					ClrBit(m_signals[index], 0);
++					ClrBit(m_signals[index], 1);
++					/* Copy back + rotate position */
++					storelocation = 6;
++					/* We already rotated the rail, so the TRACK_BIT_xxxx are the rotated ones */
++					if ((m_railroad[index] & TRACK_BIT_Y) && HasBit(tmp16, 0)) {
++						SetBit(m_signals[index], 0);
++					}
++					if ((m_railroad[index] & TRACK_BIT_X) && HasBit(tmp16, 0)) {
++						SetBit(m_signals[index], 0);
++						SB(m_signals[index], storelocation, 2, MirrorSignalDirection(GB(m_signals[index], storelocation, 2)));
++					}
++					if ((m_railroad[index] & TRACK_BIT_RIGHT) && HasBit(tmp16, 0)) {
++						SetBit(m_signals[index], 1);
++						SB(m_signals[index], storelocation, 2, MirrorSignalDirection(GB(m_signals[index], storelocation, 2)));
++						storelocation = 8;
++					}
++					if ((m_railroad[index] & TRACK_BIT_LEFT) && HasBit(tmp16, 1)) {
++						SetBit(m_signals[index], 0);
++						SB(m_signals[index], storelocation, 2, MirrorSignalDirection(GB(m_signals[index], storelocation, 2)));
++						if (storelocation == 8) {
++							/* Exchange Storelocations */
++							SwapSignalInfo(index);
++						}
++						storelocation = 8;
++					}
++					if (m_railroad[index] & TRACK_BIT_UPPER && HasBit(tmp16, 0)) {
++						SetBit(m_signals[index], 0);
++					}
++					if (m_railroad[index] & TRACK_BIT_LOWER && HasBit(tmp16, 1)) {
++						SetBit(m_signals[index], 1);
++					}
++				
++				}
++				break;
++				
++			case CP_TILE_ROAD:
++				if (GetCPMinorTileType(index) == ROAD_TILE_DEPOT) {
++					/* Depot */
++					SB(m_railroad[index], 0, 2, ChangeDiagDir((DiagDirection)GB(m_railroad[index], 0, 2), DIAGDIRDIFF_90RIGHT));
++					break;
++				}
++
++				/* rotate one-way roads */
++				if (m_railroad[index] & ROAD_Y && GetCPMinorTileType(index) == ROAD_TILE_NORMAL) {
++					SB(m_signals[index], 0, 2, MirrorOneWayRoadDirection((DisallowedRoadDirections)GB(m_signals[index], 0, 2)));
++				}
++				/* Road: */
++				SB(m_railroad[index], 0, 4, RotateRoadBits((RoadBits)GB(m_railroad[index], 0, 4), DIAGDIRDIFF_90RIGHT));
++				/* Trams: */
++				SB(m_railroad[index], 4, 4, RotateRoadBits((RoadBits)GB(m_railroad[index], 4, 4), DIAGDIRDIFF_90RIGHT));
++
++			
++				break;
++
++				case CP_TILE_TUNNELBRIDGE:
++					/* tunnel/bridge */
++					SB(m_railroad[index], 0, 2, ChangeDiagDir((DiagDirection)GB(m_railroad[index], 0, 2), DIAGDIRDIFF_90RIGHT));
++				
++					break;
++
++				default: break;
++		}
++
++	}
++
++	Swap(this->m_width, this->m_height);
++}
++
++/**
++ * Rotates the copied content CounterClockWise
++ * This is done by first rotating the array indices,
++ * then rotating the field contents
++ **/
++void CopyPaste::RotateSelectionCCW()
++{
++	int w = GetWidth() - 1;
++	int h = GetHeight() - 1;
++	uint8 storelocation;
++	int index, len;
++
++	uint8 tmp8;
++	uint16 tmp16;
++
++	/* Rotate array indices */
++	rotate(m_heightmap, GetWidth(), GetHeight(), -1);
++	rotate(m_terrain_needed, GetWidth(), GetHeight(), -1);
++	rotate(m_tiletype, w, h, -1);
++	rotate(m_railroad,   w, h, -1);
++	rotate(m_signals,w, h, -1);
++
++	/* Rotate array content (tracks, depots etc..) */
++	len = w * h;
++	for (index = 0; index < len; index++) {
++		switch (GetCPTileType(index)) {
++			case CP_TILE_RAIL:
++				if (GetCPMinorTileType(index) == RAIL_TILE_DEPOT) {
++					//Depot
++					SB(m_railroad[index], 0, 2, ChangeDiagDir((DiagDirection)GB(m_railroad[index], 0, 2), DIAGDIRDIFF_90LEFT));
++					break;
++				}
++				tmp8 = m_railroad[index];
++				/* Clear Tracks: bits 0-5 */
++				m_railroad[index] &= ~63U;
++				/* Copy back + rotate */
++				if (tmp8 & TRACK_BIT_Y) m_railroad[index]     |= TRACK_BIT_X;
++				if (tmp8 & TRACK_BIT_X) m_railroad[index]     |= TRACK_BIT_Y;
++				if (tmp8 & TRACK_BIT_RIGHT) m_railroad[index] |= TRACK_BIT_UPPER;
++				if (tmp8 & TRACK_BIT_LEFT) m_railroad[index]  |= TRACK_BIT_LOWER;
++				if (tmp8 & TRACK_BIT_UPPER) m_railroad[index] |= TRACK_BIT_LEFT;
++				if (tmp8 & TRACK_BIT_LOWER) m_railroad[index] |= TRACK_BIT_RIGHT;
++				if (GetCPMinorTileType(index) == RAIL_TILE_SIGNALS) {
++					//Signals
++					//Rotate position
++					tmp16 = m_signals[index];
++					/* Clear Signals: Bits 0-2 */
++					ClrBit(m_signals[index], 0);
++					ClrBit(m_signals[index], 1);
++					//Copy back + rotate position
++					storelocation = 6;
++					/* We already rotated the rail, so the TRACK_BIT_xxxx are the rotated ones */
++					if (m_railroad[index] & TRACK_BIT_Y && HasBit(tmp16, 0)) {
++						SetBit(m_signals[index], 0);
++						SB(m_signals[index], storelocation, 2, MirrorSignalDirection(GB(m_signals[index], storelocation, 2)));
++					}
++					if (m_railroad[index] & TRACK_BIT_X && HasBit(tmp16, 0)) {
++						SetBit(m_signals[index], 0);
++					}
++					if (m_railroad[index] & TRACK_BIT_LEFT && HasBit(tmp16, 0)) {
++						SetBit(m_signals[index], 0);
++						storelocation = 8;
++					}
++					if (m_railroad[index] & TRACK_BIT_RIGHT && HasBit(tmp16, 1)) {
++						SetBit(m_signals[index], 1);
++						storelocation = 8;
++					}
++					if (m_railroad[index] & TRACK_BIT_LOWER && HasBit(tmp16, 0)) {
++						SetBit(m_signals[index], 1);
++						SB(m_signals[index], storelocation, 2, MirrorSignalDirection(GB(m_signals[index], storelocation, 2)));
++						storelocation = 8;
++					}
++					if (m_railroad[index] & TRACK_BIT_UPPER && HasBit(tmp16, 1)) {
++						SetBit(m_signals[index], 0);
++						SB(m_signals[index], storelocation, 2, MirrorSignalDirection(GB(m_signals[index], storelocation, 2)));
++						if (storelocation == 8) {
++							/* Exchange Storelocations */
++							SwapSignalInfo(index);
++						}
++						storelocation = 8;
++					}
++				}
++				break;
++
++			case CP_TILE_ROAD:
++				if (GetCPMinorTileType(index) == ROAD_TILE_DEPOT) {
++					//Depot
++					SB(m_railroad[index], 0, 2, ChangeDiagDir((DiagDirection)GB(m_railroad[index], 0, 2), DIAGDIRDIFF_90LEFT));
++					break;
++				}
++				if (m_railroad[index] & ROAD_X && GetCPMinorTileType(index) == ROAD_TILE_NORMAL) {
++					SB(m_signals[index], 0, 2, MirrorOneWayRoadDirection((DisallowedRoadDirections)GB(m_signals[index], 0, 2)));
++				}
++				//Road & Tram:
++				SB(m_railroad[index], 0, 4, RotateRoadBits((RoadBits)GB(m_railroad[index], 0, 4), DIAGDIRDIFF_90LEFT));
++				SB(m_railroad[index], 4, 4, RotateRoadBits((RoadBits)GB(m_railroad[index], 4, 4), DIAGDIRDIFF_90LEFT));
++
++				break;
++
++			case CP_TILE_TUNNELBRIDGE:
++				SB(m_railroad[index], 0, 2, ChangeDiagDir((DiagDirection)GB(m_railroad[index], 0, 2), DIAGDIRDIFF_90LEFT));
++				break;
++			default: break;
++		}
++
++	}
++
++	Swap(this->m_height, this->m_width);
++}
++
++void CopyPaste::MirrorSelectionHorizontal()
++{
++	int w = GetWidth() - 1;
++	int h = GetHeight() - 1;
++	uint8 storelocation;
++	int index, len;
++
++	uint8 tmp8;
++	uint16 tmp16;
++
++	/* Mirror array indices */
++	mirror(m_heightmap, GetWidth(), GetHeight(), AXIS_X);
++	mirror(m_terrain_needed, GetWidth(), GetHeight(), AXIS_X);
++	mirror(m_tiletype, w, h, AXIS_X);
++	mirror(m_railroad,   w, h, AXIS_X);
++	mirror(m_signals,w, h, AXIS_X);
++
++	/* Mirror array content (left <-> right) */
++	len = w * h;
++	for (index = 0; index < len; index++) {
++		switch (GetCPTileType(index)) {
++			case CP_TILE_RAIL:
++				if (GetCPMinorTileType(index) == RAIL_TILE_DEPOT) {
++					//Depot
++					tmp8 = GB(m_railroad[index], 0, 2); //Extract bit 0-1
++					if (tmp8 == DIAGDIR_NE || tmp8 == DIAGDIR_SW) tmp8 = ReverseDiagDir((DiagDirection)tmp8);
++					SB(m_railroad[index], 0, 2, tmp8); // set
++					break;
++				}
++				tmp8 = m_railroad[index];
++				/* Clear Tracks: Bits 0-5 */
++				m_railroad[index] &= ~63U;
++				/* Copy back + mirror */
++				if (tmp8 & TRACK_BIT_X)     m_railroad[index] |= TRACK_BIT_X;
++				if (tmp8 & TRACK_BIT_Y)     m_railroad[index] |= TRACK_BIT_Y;
++				if (tmp8 & TRACK_BIT_LEFT)  m_railroad[index] |= TRACK_BIT_UPPER;
++				if (tmp8 & TRACK_BIT_RIGHT) m_railroad[index] |= TRACK_BIT_LOWER;
++				if (tmp8 & TRACK_BIT_UPPER) m_railroad[index] |= TRACK_BIT_LEFT;
++				if (tmp8 & TRACK_BIT_LOWER) m_railroad[index] |= TRACK_BIT_RIGHT;
++				
++				if (GetCPMinorTileType(index) == RAIL_TILE_SIGNALS) {
++					//Signals
++					//Mirror position
++					tmp16 = m_signals[index];
++					//Copy back + mirror position
++					storelocation = 6;
++					if (m_railroad[index] & TRACK_BIT_X && HasBit(tmp16, 0)) {
++						SB(m_signals[index], storelocation, 2, MirrorSignalDirection(GB(m_signals[index], storelocation, 2)));
++					}
++					if (m_railroad[index] & TRACK_BIT_LEFT && HasBit(tmp16, 0)) {
++						SB(m_signals[index], storelocation, 2, MirrorSignalDirection(GB(m_signals[index], storelocation, 2)));
++						storelocation = 8;
++					}
++					if (m_railroad[index] & TRACK_BIT_RIGHT && HasBit(tmp16, 1)) {
++						SB(m_signals[index], storelocation, 2, MirrorSignalDirection(GB(m_signals[index], storelocation, 2)));
++						storelocation = 8;
++					}
++					if (m_railroad[index] & TRACK_BIT_UPPER && HasBit(tmp16, 0)) {
++						SB(m_signals[index], storelocation, 2, MirrorSignalDirection(GB(m_signals[index], storelocation, 2)));
++						storelocation = 8;
++					}
++					if (m_railroad[index] & TRACK_BIT_LOWER && HasBit(tmp16, 1)) {
++						SB(m_signals[index], storelocation, 2, MirrorSignalDirection(GB(m_signals[index], storelocation, 2)));
++						storelocation = 8;
++					}
++				}
++				break;
++
++			case CP_TILE_ROAD:
++				if (GetCPMinorTileType(index) == ROAD_TILE_DEPOT) {
++					//Depot
++					tmp8 = GB(m_railroad[index], 0, 2); //Extract bit 0-1
++					if (tmp8 == DIAGDIR_NE || tmp8 == DIAGDIR_SW) tmp8 = ReverseDiagDir((DiagDirection)tmp8);
++					SB(m_railroad[index], 0, 2, tmp8); // set
++					break;
++				}
++				//Road:
++				//swap horizontal roadpieces
++				tmp8 = m_railroad[index];
++				m_railroad[index] &= ~(ROAD_NE | ROAD_SW  | ((ROAD_NE | ROAD_SW) << 4)); //Clear specific road bits
++				if ((tmp8 & ROAD_NE) > 0) m_railroad[index] |= ROAD_SW;
++				if ((tmp8 & ROAD_SW) > 0) m_railroad[index] |= ROAD_NE;
++				if ((tmp8 & (ROAD_NE << 4)) > 0) m_railroad[index] |= (ROAD_SW << 4);
++				if ((tmp8 & (ROAD_SW << 4)) > 0) m_railroad[index] |= (ROAD_NE << 4);
++				
++				if ((tmp8 & ROAD_X) && GetCPMinorTileType(index) == ROAD_TILE_NORMAL) {
++					SB(m_signals[index], 0, 2, MirrorOneWayRoadDirection((DisallowedRoadDirections)GB(m_signals[index], 0, 2)));
++				}
++				
++				break;
++
++			case CP_TILE_TUNNELBRIDGE:
++				/* Tunnel/Bridge
++				 * just mirror direction
++				 */
++				tmp8 = GB(m_railroad[index], 0, 2); //Extract bit 001
++				if (tmp8 == DIAGDIR_NE || tmp8 == DIAGDIR_SW) tmp8 = ReverseDiagDir((DiagDirection)tmp8);
++				SB(m_railroad[index], 0, 2, tmp8); // set
++			
++				break;
++
++			default: break;
++		}
++
++	}
++}
++
++void CopyPaste::MirrorSelectionVertical()
++{
++	int w = GetWidth() - 1;
++	int h = GetHeight() - 1;
++	uint8 storelocation;
++	int index, len;
++
++	uint8 tmp8;
++	uint16 tmp16;
++
++	//Mirror arrays
++	mirror(m_heightmap, GetWidth(), GetHeight(), AXIS_Y);
++	mirror(m_terrain_needed, GetWidth(), GetHeight(), AXIS_Y);
++	mirror(m_tiletype, w, h, AXIS_Y);
++	mirror(m_railroad,   w, h, AXIS_Y);
++	mirror(m_signals,w, h, AXIS_Y);
++
++	//Mirror array content (up <-> down)
++	len = w * h;
++	for (index = 0; index < len; index++) {
++		switch (GetCPTileType(index)) {
++			case CP_TILE_RAIL:
++				if (GetCPMinorTileType(index) == RAIL_TILE_DEPOT) {
++					//Depot
++					tmp8 = GB(m_railroad[index], 0, 2); //Extract bit 0-1
++					if (tmp8 == DIAGDIR_NW || tmp8 == DIAGDIR_SE) tmp8 = ReverseDiagDir((DiagDirection)tmp8);
++					SB(m_railroad[index], 0, 2, tmp8); // set
++					break;
++				}
++				tmp8 = m_railroad[index];
++				//Clear Tracks
++				m_railroad[index] &= ~63U; //Clear bits 0-5
++				//Copy back + mirror
++				if (tmp8 & TRACK_BIT_X) m_railroad[index]     |= TRACK_BIT_X;
++				if (tmp8 & TRACK_BIT_Y) m_railroad[index]     |= TRACK_BIT_Y;
++				if (tmp8 & TRACK_BIT_RIGHT) m_railroad[index] |= TRACK_BIT_UPPER;
++				if (tmp8 & TRACK_BIT_LEFT) m_railroad[index]  |= TRACK_BIT_LOWER;
++				if (tmp8 & TRACK_BIT_LOWER) m_railroad[index] |= TRACK_BIT_LEFT;
++				if (tmp8 & TRACK_BIT_UPPER) m_railroad[index] |= TRACK_BIT_RIGHT;
++				if (GetCPMinorTileType(index) == RAIL_TILE_SIGNALS) {
++					//Signals
++					//Mirror position
++					tmp16 = m_signals[index];
++					//Clear Signals
++					ClrBit(m_signals[index], 0);
++					ClrBit(m_signals[index], 1);
++					//Copy back + mirror position
++					storelocation = 6;
++					if (m_railroad[index] & TRACK_BIT_X && HasBit(tmp16, 0)) {
++						SetBit(m_signals[index], 0);
++					}
++					if (m_railroad[index] & TRACK_BIT_Y && HasBit(tmp16, 0)) {
++						SetBit(m_signals[index], 0);
++						SB(m_signals[index], storelocation, 2, MirrorSignalDirection(GB(m_signals[index], storelocation, 2)));
++					}
++					if (m_railroad[index] & TRACK_BIT_RIGHT && HasBit(tmp16, 0)) {
++						SetBit(m_signals[index], 1);
++						storelocation = 8;
++					}
++					if (m_railroad[index] & TRACK_BIT_LEFT && HasBit(tmp16, 1)) {
++						SetBit(m_signals[index], 0);
++						if (storelocation == 8) {
++							/* Exchange Storelocations */
++							SwapSignalInfo(index);
++						}
++						storelocation = 8;
++					}
++					if (m_railroad[index] & TRACK_BIT_LOWER && HasBit(tmp16, 0)) {
++						SetBit(m_signals[index], 1);
++						storelocation = 8;
++					}
++					if (m_railroad[index] & TRACK_BIT_UPPER && HasBit(tmp16, 1)) {
++						SetBit(m_signals[index], 0);
++						if (storelocation == 8) {
++							/* Exchange Storelocations */
++							SwapSignalInfo(index);
++						}
++						storelocation = 8;
++					}
++
++				}
++				break;
++
++			case CP_TILE_ROAD:
++				if (GetCPMinorTileType(index) == ROAD_TILE_DEPOT) {
++					//Depot
++					tmp8 = GB(m_railroad[index], 0, 2); //Extract bit 0-1
++					if (tmp8 == DIAGDIR_NW || tmp8 == DIAGDIR_SE) tmp8 = ReverseDiagDir((DiagDirection)tmp8);
++					SB(m_railroad[index], 0, 2, tmp8); // set
++					break;
++				}
++				//Road:
++				//swap horizontal roadpieces
++				tmp8 = m_railroad[index];
++				m_railroad[index] &= ~(ROAD_NW | ROAD_SE  | ((ROAD_NW | ROAD_SE) << 4)); //Clear specific road bits
++				if ((tmp8 & ROAD_NW) > 0) m_railroad[index] |= ROAD_SE;
++				if ((tmp8 & ROAD_SE) > 0) m_railroad[index] |= ROAD_NW;
++				if ((tmp8 & (ROAD_NW << 4)) > 0) m_railroad[index] |= (ROAD_SE << 4);
++				if ((tmp8 & (ROAD_SE << 4)) > 0) m_railroad[index] |= (ROAD_NW << 4);
++				
++				if ((tmp8 & ROAD_Y) && GetCPMinorTileType(index) == ROAD_TILE_NORMAL) {
++					SB(m_signals[index], 0, 2, MirrorOneWayRoadDirection((DisallowedRoadDirections)GB(m_signals[index], 0, 2)));
++				}
++				
++				break;
++
++			case CP_TILE_TUNNELBRIDGE:
++				/* Tunnel / Bridge */
++				tmp8 = GB(m_railroad[index], 0, 2); //Extract bit 1-2
++				if (tmp8 == DIAGDIR_NW || tmp8 == DIAGDIR_SE) tmp8 = ReverseDiagDir((DiagDirection)tmp8);
++				SB(m_railroad[index], 0, 2, tmp8); // set
++				break;
++			default: break;
++		}
++
++	}
++}
++
++
+Index: src/depot.cpp
+===================================================================
+--- src/depot.cpp	(revision 19692)
++++ src/depot.cpp	(working copy)
+@@ -15,11 +15,31 @@
+ #include "window_func.h"
+ #include "core/pool_func.hpp"
+ #include "vehicle_gui.h"
++#include "road_map.h"
++#include "rail_map.h"
++#include "water_map.h"
++#include "station_map.h"
++#include "depot_map.h"
+ 
+ DepotPool _depot_pool("Depot");
+ INSTANTIATE_POOL_METHODS(Depot)
+ 
+ /**
++ * Returns the direction the exit of the depot on the given tile is facing.
++ */
++DiagDirection GetDepotDirection(TileIndex tile, TransportType type)
++{
++	assert(IsDepotTypeTile(tile, type));
++
++	switch (type) {
++		case TRANSPORT_RAIL:  return GetRailDepotDirection(tile);
++		case TRANSPORT_ROAD:  return GetRoadDepotDirection(tile);
++		case TRANSPORT_WATER: return GetShipDepotDirection(tile);
++		default: return INVALID_DIAGDIR; /* Not reached */
++	}
++}
++
++/**
+  * Clean up a depot
+  */
+ Depot::~Depot()
+Index: src/openttd.h
+===================================================================
+--- src/openttd.h	(revision 19692)
++++ src/openttd.h	(working copy)
+@@ -33,6 +33,8 @@
+ 	SM_START_SCENARIO,
+ 	SM_START_HEIGHTMAP,
+ 	SM_LOAD_HEIGHTMAP,
++	SM_SAVE_TEMPLATE,
++	SM_LOAD_TEMPLATE,
+ };
+ 
+ /* Display Options */
+Index: src/bridge.h
+===================================================================
+--- src/bridge.h	(revision 19692)
++++ src/bridge.h	(working copy)
+@@ -70,6 +70,8 @@
+ CommandCost CheckBridgeAvailability(BridgeType bridge_type, uint bridge_len, DoCommandFlag flags = DC_NONE);
+ int CalcBridgeLenCostFactor(int x);
+ 
++BridgeType GetFastestAvailableBridgeType(uint bridge_len);
++
+ void ResetBridges();
+ 
+ #endif /* BRIDGE_H */
+Index: src/tunnel_map.cpp
+===================================================================
+--- src/tunnel_map.cpp	(revision 19692)
++++ src/tunnel_map.cpp	(working copy)
+@@ -74,3 +74,13 @@
+ 		IsTunnelInWayDir(tile, z, (TileX(tile) > (MapMaxX() / 2)) ? DIAGDIR_NE : DIAGDIR_SW) ||
+ 		IsTunnelInWayDir(tile, z, (TileY(tile) > (MapMaxY() / 2)) ? DIAGDIR_NW : DIAGDIR_SE);
+ }
++
++bool IsTunnelBelow(TileIndex tile)
++{
++	uint32 z = GetTileZ(tile);
++	while (z > 0) {
++		z -= TILE_HEIGHT;
++		if (IsTunnelInWay(tile, z)) return true;
++	}
++	return false;
++}
+Index: src/viewport.cpp
+===================================================================
+--- src/viewport.cpp	(revision 19692)
++++ src/viewport.cpp	(working copy)
+@@ -45,6 +45,7 @@
+ #include "window_func.h"
+ #include "tilehighlight_func.h"
+ #include "window_gui.h"
++#include "copy_paste.h"
+ 
+ #include "table/sprites.h"
+ #include "table/strings.h"
+@@ -856,6 +857,12 @@
+ 	DrawSelectionSprite(sel, pal, ti, 7, FOUNDATION_PART_NORMAL);
+ }
+ 
++static void DrawPreviewSprite(SpriteID image, SpriteID pal, uint x, uint y, uint z)
++{
++	//DrawGroundSpriteAt(image, x, y, z + 7);
++	AddSortableSpriteToDraw(image, pal, x, y, 0x10, 0x10, 1, z + 7);
++}
++
+ static bool IsPartOfAutoLine(int px, int py)
+ {
+ 	px -= _thd.selstart.x;
+@@ -887,6 +894,50 @@
+ 
+ #include "table/autorail.h"
+ 
++/*
++static uint GetTileHFromCopyBuffer(TileIndex index, uint32 baseh, uint32* h)
++{
++	return GetTileh((uint)_copy_heightmap[index] + baseh, (uint)_copy_heightmap[index+1] + baseh, (uint)_copy_heightmap[index + _copy_width] + baseh, (uint)_copy_heightmap[index + _copy_width + 1] + baseh, h);
++}
++*/
++
++static void DrawPreviewTile(const TileInfo *ti)
++{
++	uint32 image;
++	//We have to get the index within our _copy_paste.m_rail[] structure
++	uint32 tile_x = ti->x / TILE_SIZE;
++	uint32 tile_y = ti->y / TILE_SIZE;
++	uint32 pos_x = _thd.pos.x / TILE_SIZE;
++	uint32 pos_y = _thd.pos.y / TILE_SIZE;
++	uint32 bindex = (tile_x - pos_x) + ((_copy_paste.GetWidth() - 1) * (tile_y - pos_y));
++	//uint32 baseh = TileHeight(TileXY(pos_x, pos_y));
++	//uint32 tindex = (tile_x - pos_x) + ((_copy_width) * (tile_y - pos_y));
++	//uint32 minh;
++	//uint32 tileh = GetTileHFromCopyBuffer(tindex, baseh, &minh);
++	
++	if (((tile_x - pos_x) == 0) || ((tile_x - pos_x) == (_copy_paste.GetWidth() - 2)) || ((tile_y - pos_y) == 0) || ((tile_y - pos_y) == (_copy_paste.GetHeight() - 2))) {
++		//Highlight BorderTiles
++		image = SPR_SELECT_TILE + _tileh_to_sprite[ti->tileh];
++		DrawPreviewSprite(image, PAL_NONE, ti->x, ti->y, ti->z);
++	}
++	
++	image = SPR_AUTORAIL_BASE;
++	TrackBits tracktodraw = _copy_paste.GetCPTrackBits(bindex);
++	for (Track t = TRACK_BEGIN; t < TRACK_END; t++) {
++		if (tracktodraw & TrackToTrackBits(t)) DrawPreviewSprite(image + _AutorailTilehSprite[SLOPE_FLAT][t], PAL_NONE, ti->x, ti->y, ti->z);
++	}
++	
++	/*
++	if ((_copy_rail[bindex] & (1U << TRACK_X))>0) DrawPreviewSprite(image, ti->x, ti->y, minh);
++	if ((_copy_rail[bindex] & (1U << TRACK_Y))>0) DrawPreviewSprite(image + 8, ti->x, ti->y, minh);
++	if ((_copy_rail[bindex] & (1U << TRACK_UPPER))>0) DrawPreviewSprite(image + 16, ti->x, ti->y, minh);
++	if ((_copy_rail[bindex] & (1U << TRACK_LOWER))>0) DrawPreviewSprite(image + 25, ti->x, ti->y, minh);
++	if ((_copy_rail[bindex] & (1U << TRACK_LEFT))>0) DrawPreviewSprite(image + 34, ti->x, ti->y, minh);
++	if ((_copy_rail[bindex] & (1U << TRACK_RIGHT))>0) DrawPreviewSprite(image + 42, ti->x, ti->y, minh);
++	
++	*/
++}
++
+ /**
+  * Draws autorail highlights.
+  *
+@@ -963,6 +1014,8 @@
+ 			HighLightStyle type = _thd.drawstyle & HT_DIR_MASK;
+ 			assert(type < HT_DIR_END);
+ 			DrawAutorailSelection(ti, _autorail_type[type][0]);
++		} else if (_thd.drawstyle & HT_PREVIEW) {
++			DrawPreviewTile(ti);
+ 		} else if (IsPartOfAutoLine(ti->x, ti->y)) {
+ 			/* autorail highlighting long line */
+ 			HighLightStyle dir = _thd.drawstyle & HT_DIR_MASK;
+@@ -1997,6 +2050,9 @@
+ 					_thd.selstart.x = x1 & ~TILE_UNIT_MASK;
+ 					_thd.selstart.y = y1 & ~TILE_UNIT_MASK;
+ 					break;
++				case HT_PREVIEW:
++					_thd.new_drawstyle = HT_PREVIEW;
++					break;
+ 				default:
+ 					NOT_REACHED();
+ 					break;
+Index: src/tunnel_map.h
+===================================================================
+--- src/tunnel_map.h	(revision 19692)
++++ src/tunnel_map.h	(working copy)
+@@ -40,6 +40,7 @@
+ TileIndex GetOtherTunnelEnd(TileIndex);
+ bool IsTunnelInWay(TileIndex, uint z);
+ bool IsTunnelInWayDir(TileIndex tile, uint z, DiagDirection dir);
++bool IsTunnelBelow(TileIndex tile);
+ 
+ /**
+  * Makes a road tunnel entrance
+Index: src/pathfinder/npf/npf.cpp
+===================================================================
+--- src/pathfinder/npf/npf.cpp	(revision 19692)
++++ src/pathfinder/npf/npf.cpp	(working copy)
+@@ -16,6 +16,7 @@
+ #include "../../functions.h"
+ #include "../../ship.h"
+ #include "../../roadstop_base.h"
++#include "../../depot_map.h"
+ #include "../pathfinder_func.h"
+ #include "../pathfinder_type.h"
+ #include "../follow_track.hpp"
+@@ -697,22 +698,6 @@
+ 	return true; // no need to check
+ }
+ 
+-
+-/**
+- * Returns the direction the exit of the depot on the given tile is facing.
+- */
+-static DiagDirection GetDepotDirection(TileIndex tile, TransportType type)
+-{
+-	assert(IsDepotTypeTile(tile, type));
+-
+-	switch (type) {
+-		case TRANSPORT_RAIL:  return GetRailDepotDirection(tile);
+-		case TRANSPORT_ROAD:  return GetRoadDepotDirection(tile);
+-		case TRANSPORT_WATER: return GetShipDepotDirection(tile);
+-		default: return INVALID_DIAGDIR; // Not reached
+-	}
+-}
+-
+ /** Tests if a tile is a road tile with a single tramtrack (tram can reverse) */
+ static DiagDirection GetSingleTramBit(TileIndex tile)
+ {
+Index: src/tilehighlight_type.h
+===================================================================
+--- src/tilehighlight_type.h	(revision 19692)
++++ src/tilehighlight_type.h	(working copy)
+@@ -17,6 +17,7 @@
+ #include "tile_type.h"
+ #include "viewport_type.h"
+ 
++
+ /** Highlighting draw styles */
+ enum HighLightStyle {
+ 	HT_NONE      = 0x00, ///< default
+@@ -25,8 +26,9 @@
+ 	HT_SPECIAL   = 0x30, ///< special mode used for highlighting while dragging (and for tunnels/docks)
+ 	HT_DRAG      = 0x40, ///< dragging items in the depot windows
+ 	HT_LINE      = 0x08, ///< used for autorail highlighting (longer streches), lower bits: direction
++	HT_PREVIEW   = 0x100, ///< used for CopyPaste Preview
+ 	HT_RAIL      = 0x80, ///< autorail (one piece), lower bits: direction
+-	HT_DRAG_MASK = 0xF8, ///< masks the drag-type
++	HT_DRAG_MASK = 0x1F8, ///< masks the drag-type
+ 
+ 	/* lower bits (used with HT_LINE and HT_RAIL):
+ 	 * (see ASCII art in autorail.h for a visual interpretation) */
+Index: src/gfxinit.cpp
+===================================================================
+--- src/gfxinit.cpp	(revision 19692)
++++ src/gfxinit.cpp	(working copy)
+@@ -172,6 +172,9 @@
+ 	/* Initialize the unicode to sprite mapping table */
+ 	InitializeUnicodeGlyphMap();
+ 
++	/* Load CopyPaste graphics */
++	LoadGrfFile("copypaste.grf", SPR_COPYPASTE_BASE, i++);
++
+ 	/*
+ 	 * Load the base NewGRF with OTTD required graphics as first NewGRF.
+ 	 * However, we do not want it to show up in the list of used NewGRFs,
+Index: src/openttd.cpp
+===================================================================
+--- src/openttd.cpp	(revision 19692)
++++ src/openttd.cpp	(working copy)
+@@ -31,6 +31,7 @@
+ #include "landscape.h"
+ #include "company_func.h"
+ #include "command_func.h"
++#include "command_queue.h"
+ #include "news_func.h"
+ #include "fios.h"
+ #include "aircraft.h"
+@@ -55,6 +56,7 @@
+ #include "roadstop_base.h"
+ #include "functions.h"
+ #include "elrail_func.h"
++#include "copy_paste.h"
+ #include "rev.h"
+ #include "highscore.h"
+ #include "thread/thread.h"
+@@ -934,9 +936,13 @@
+ 
+ void SwitchToMode(SwitchMode new_mode)
+ {
++	//If we are not saving, the command_queue will be reset
++	if ((new_mode != SM_SAVE) && (new_mode != SM_SAVE_TEMPLATE) && (new_mode != SM_LOAD_TEMPLATE))
++		_command_queue.ClearCommandQueue();
++
+ #ifdef ENABLE_NETWORK
+ 	/* If we are saving something, the network stays in his current state */
+-	if (new_mode != SM_SAVE) {
++	if ((new_mode != SM_SAVE) && (new_mode != SM_SAVE_TEMPLATE) && (new_mode != SM_LOAD_TEMPLATE)) {
+ 		/* If the network is active, make it not-active */
+ 		if (_networking) {
+ 			if (_network_server && (new_mode == SM_LOAD || new_mode == SM_NEWGAME || new_mode == SM_RESTARTGAME)) {
+@@ -1073,6 +1079,24 @@
+ 			MarkWholeScreenDirty();
+ 			break;
+ 
++		case SM_SAVE_TEMPLATE: /* Save Template */
++			if (_copy_paste.SaveLoadTemplate(_file_to_saveload.name, SL_SAVE) != SL_OK) {
++				SetDParamStr(0, _copy_paste.GetErrorString());
++				ShowErrorMessage(INVALID_STRING_ID, STR_JUST_RAW_STRING, WL_ERROR);
++			} else {
++				DeleteWindowById(WC_SAVELOAD, 0);
++			}
++			break;
++
++		case SM_LOAD_TEMPLATE: /* Load Template */
++			if (_copy_paste.SaveLoadTemplate(_file_to_saveload.name, SL_LOAD) != SL_OK) {
++				SetDParamStr(0, _copy_paste.GetErrorString());
++				ShowErrorMessage(INVALID_STRING_ID, STR_JUST_RAW_STRING, WL_ERROR);
++			} else {
++				DeleteWindowById(WC_SAVELOAD, 0);
++			}
++			break;
++
+ 		default: NOT_REACHED();
+ 	}
+ 
+@@ -1213,6 +1237,8 @@
+ 
+ 		CheckCaches();
+ 
++		CallCommandQueueTick();
++
+ 		/* All these actions has to be done from OWNER_NONE
+ 		 *  for multiplayer compatibility */
+ 		CompanyID old_company = _current_company;
+@@ -1229,6 +1255,7 @@
+ 
+ 		CallWindowTickEvent();
+ 		NewsLoop();
++		
+ 		_current_company = old_company;
+ 	}
+ }
+Index: docs/copy_paste_array.txt
+===================================================================
+--- docs/copy_paste_array.txt	(revision 0)
++++ docs/copy_paste_array.txt	(revision 0)
+@@ -0,0 +1,62 @@
++m_tiletype:
++	bits 0..3: tiletype
++	bits 4..7: minor tiletype
++	
++m_heightmap:
++	storing height relative to the northern corner
++m_terrain_needed:
++	bit 0 set: paste height if terraform level is 1
++
++tiletypes:
++	CP_TILE_RAIL:
++		minor tiletype: RailTileType
++		m_railroad bits 6..7: RailType(monorail, maglev, electric, normal)
++		RailTileTypes:
++			RAIL_TILE_DEPOT:
++				m_railroad bits 0..1: depot direction
++			RAIL_TILE_WAYPOINT:
++				m_signals bits 0..7: waypoint grf id
++				m_railroad bits 0..1: waypoint direction
++			RAIL_TILE_SIGNALS:
++				m_signals bit 0 set: signal 1 present
++				m_signals bit 1 set: signal 2 present
++				m_signals bit 2 set: first signal is semaphore
++				m_signals bit 3 set: second signal is semaphore
++				m_signals bits 6..7 : first signal direction
++				m_signals bits 8..9 : second signal direction
++				m_signals bits 10..12: first signal type
++				m_signals bits 13..15: second signal type
++			RAIL_TILE_NORMAL and RAIL_TILE_SIGNALS:
++				m_railroad bits 0..5: trackbits
++
++	CP_TILE_ROAD:
++		minor tiletype: RoadTileType
++		RoadTileTypes:
++			ROAD_TILE_DEPOT:
++				m_railroad bits 0..1: depot direction
++				m_railroad bit 2 set: tram depot
++			ROAD_TILE_CROSSING, ROAD_TILE_NORMAL:
++				m_railroad bits 0..3: RoadBits normal road
++				m_railroad bits 4..7: RoadBits tram
++			ROAD_TILE_NORMAL:
++				m_signals bits 0..1: disallowed road directions
++			ROAD_TILE_CROSSING:
++				m_railroad bits 6..7: rail type
++
++	CP_TILE_TUNNELBRIDGE:
++		minor tiletype bit 0 set: tunnel
++		m_railroad bit 0..1: direction
++		m_railroad bit 2..3: transporttype
++		m_railroad bit 4 set: start
++		m_railroad bit 6..7: rail/roadtypes
++
++	CP_TILE_STATION:
++		minor tiletype: TileType (minor bits indicate station type)
++		TileType:
++			CP_TILE_ROAD:
++				m_railroad bits 0..1: direction
++				m_railroad bit 2 set: truck stop
++				m_railroad bit 3 set: drive through
++				(3..5 currently unused)
++				m_railroad bits 6..7: road type
++			CP_TILE_RAIL:
+Index: projects/openttd_vs80.vcproj
+===================================================================
+--- projects/openttd_vs80.vcproj	(revision 19692)
++++ projects/openttd_vs80.vcproj	(working copy)
+@@ -492,6 +492,10 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath=".\..\src\command_queue.cpp"
++				>
++			</File>
++			<File
+ 				RelativePath=".\..\src\console.cpp"
+ 				>
+ 			</File>
+@@ -504,6 +508,10 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath=".\..\src\copy_paste.cpp"
++				>
++			</File>
++			<File
+ 				RelativePath=".\..\src\currency.cpp"
+ 				>
+ 			</File>
+@@ -828,6 +836,14 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath=".\..\src\copy_paste.h"
++				>
++			</File>
++			<File
++				RelativePath=".\..\src\command_queue.h"
++				>
++			</File>
++			<File
+ 				RelativePath=".\..\src\cheat_func.h"
+ 				>
+ 			</File>
+@@ -1792,6 +1808,10 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath=".\..\src\copy_paste_gui.cpp"
++				>
++			</File>
++			<File
+ 				RelativePath=".\..\src\depot_gui.cpp"
+ 				>
+ 			</File>
+Index: projects/openttd_vs90.vcproj
+===================================================================
+--- projects/openttd_vs90.vcproj	(revision 19692)
++++ projects/openttd_vs90.vcproj	(working copy)
+@@ -489,6 +489,10 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath=".\..\src\command_queue.cpp"
++				>
++			</File>
++			<File
+ 				RelativePath=".\..\src\console.cpp"
+ 				>
+ 			</File>
+@@ -501,6 +505,10 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath=".\..\src\copy_paste.cpp"
++				>
++			</File>
++			<File
+ 				RelativePath=".\..\src\currency.cpp"
+ 				>
+ 			</File>
+@@ -841,6 +849,10 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath=".\..\src\command_queue.h"
++				>
++			</File>
++			<File
+ 				RelativePath=".\..\src\command_type.h"
+ 				>
+ 			</File>
+@@ -885,6 +897,10 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath=".\..\src\copy_paste.h"
++				>
++			</File>
++			<File
+ 				RelativePath=".\..\src\currency.h"
+ 				>
+ 			</File>
+@@ -1789,6 +1805,10 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath=".\..\src\copy_paste_gui.cpp"
++				>
++			</File>
++			<File
+ 				RelativePath=".\..\src\depot_gui.cpp"
+ 				>
+ 			</File>
+Index: source.list
+===================================================================
+--- source.list	(revision 19692)
++++ source.list	(working copy)
+@@ -8,6 +8,8 @@
+ cargotype.cpp
+ cheat.cpp
+ command.cpp
++command_queue.cpp
++copy_paste.cpp
+ console.cpp
+ console_cmds.cpp
+ crashlog.cpp
+@@ -130,6 +132,8 @@
+ console_gui.h
+ console_internal.h
+ console_type.h
++copy_paste.h
++command_queue.h
+ crashlog.h
+ currency.h
+ date_func.h
+@@ -373,6 +377,7 @@
+ cheat_gui.cpp
+ company_gui.cpp
+ console_gui.cpp
++copy_paste_gui.cpp
+ date_gui.cpp
+ depot_gui.cpp
+ dock_gui.cpp
