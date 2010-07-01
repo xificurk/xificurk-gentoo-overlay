@@ -34,7 +34,7 @@ RDEPEND="<dev-libs/boost-1.41.0
 	curl? ( net-misc/curl )
 	gdal? ( sci-libs/gdal )
 	postgres? (
-		>=virtual/postgresql-base-8.0
+		>=dev-db/postgresql-base-8.0
 		>=dev-db/postgis-1.1.2
 	)
 	python? ( <dev-libs/boost-1.41.0[python] )
