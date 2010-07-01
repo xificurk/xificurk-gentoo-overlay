@@ -1,6 +1,6 @@
 # Copyright 1999-2009 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-x86/net-misc/dhcp/dhcp-4.1.0.ebuild,v 1.1 2009/07/09 14:45:21 chainsaw Exp $
+# $Header: $
 
 inherit eutils flag-o-matic autotools
 
