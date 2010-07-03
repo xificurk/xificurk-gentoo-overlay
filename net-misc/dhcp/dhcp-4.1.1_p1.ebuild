@@ -97,9 +97,13 @@ src_compile() {
 		--enable-paranoia \
 		--sysconfdir /etc/dhcp \
 		--with-cli-pid-file=/var/run/dhcp/dhclient.pid \
+		--with-cli6-pid-file=/var/run/dhcp/dhclient6.pid \
 		--with-cli-lease-file=/var/lib/dhcp/dhclient.leases \
+		--with-cli6-lease-file=/var/lib/dhcp/dhclient6.leases \
 		--with-srv-pid-file=/var/run/dhcp/dhcpd.pid \
+		--with-srv6-pid-file=/var/run/dhcp/dhcpd6.pid \
 		--with-srv-lease-file=/var/lib/dhcp/dhcpd.leases \
+		--with-srv6-lease-file=/var/lib/dhcp/dhcpd6.leases \
 		--with-relay-pid-file=/var/run/dhcp/dhcrelay.pid \
 		$(use_enable ipv6 dhcpv6) \
 		|| die
@@ -131,7 +135,6 @@ src_install() {
 	insinto /etc/dhcp
 	newins client/dhclient.conf dhclient.conf.sample
 	keepdir /var/{lib,run}/dhcp
-	keepdir /var/lib/dhclient
 
 	# Install our server files
 	insinto /etc/dhcp
