@@ -30,6 +30,9 @@ src_unpack() {
 	unpack ${A}
 	cd "${S}"
 
+	# User supplied ipv6 prefixlen
+	epatch "${FILESDIR}/${PN}"-4.1.1_p1-dhclient-ip6-prefixlen.patch
+
 	# Gentoo patches - these will probably never be accepted upstream
 	# Fix some permission issues
 	epatch "${FILESDIR}/${PN}"-3.0-fix-perms.patch
