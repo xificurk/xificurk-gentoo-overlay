@@ -8,7 +8,7 @@ inherit eutils
 
 DESCRIPTION="FreeRapid is a simple Java downloader that supports downloading from Rapidshare and other file-sharing services."
 HOMEPAGE="http://wordrider.net/freerapid"
-SRC_URI="http://wordrider.net/download.php?file=FreeRapid-${PV}U1.zip -> ${P}.zip"
+SRC_URI="http://wordrider.net/download.php?file=FreeRAPID-0.83U1.zip -> ${P}.zip"
 
 LICENSE="GPL"
 KEYWORDS="x86 amd64"
