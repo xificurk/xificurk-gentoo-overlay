@@ -15,7 +15,7 @@ S=${WORKDIR}/${MY_P}
 
 LICENSE="GPL-2"
 SLOT="0"
-KEYWORDS=""
+KEYWORDS="~amd64 ~ppc ~ppc64 ~x86"
 IUSE="aplaymidi debug dedicated iconv icu lzo +openmedia +png +timidity +truetype zlib copypaste"
 RESTRICT="test"
 
@@ -48,8 +48,9 @@ PDEPEND="
 src_prepare() {
 	# Patch to enable copy_paste by Xificurk
 	# http://www.tt-forums.net/viewtopic.php?f=33&t=41259&start=180
+	# http://www.tt-forums.net/viewtopic.php?f=33&t=45488&start=80
 	if use copypaste ; then
-		epatch "${FILESDIR}/copypaste_r19692.diff"
+		epatch "${FILESDIR}/clipboard-${PV}.diff"
 		cp ${FILESDIR}/copypaste.grf ${S}/bin/data/
 	fi
 }
