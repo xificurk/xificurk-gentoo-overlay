@@ -4,17 +4,14 @@
 
 EAPI="1"
 
-inherit eutils qt4 git
-
-EGIT_BRANCH="master"
-EGIT_REPO_URI="git://gitorious.org/merkaartor/main.git"
+inherit eutils qt4
 
 DESCRIPTION="A Qt4 based map editor for the openstreetmap.org project"
 HOMEPAGE="http://www.merkaartor.be"
-SRC_URI=""
+SRC_URI="http://www.merkaartor.be/attachments/download/29/${P}.tar.bz2"
 LICENSE="GPL-2"
 SLOT="0"
-KEYWORDS=""
+KEYWORDS="~amd64 ~x86"
 IUSE="nls webkit exif proj gdal gps"
 DEPEND="x11-libs/qt-gui:4
 	x11-libs/qt-svg:4
@@ -25,12 +22,14 @@ DEPEND="x11-libs/qt-gui:4
 	gps?  ( sci-geosciences/gpsd )"
 RDEPEND="${DEPEND}"
 
-S="${WORKDIR}/${PN}"
-
 src_compile() {
 	sed -i -e "/QTcpServer/a #include <QTcpSocket>" src/MainWindow.cpp
 
 	local myconf
+
+	myconf="${myconf} NODEBUG=1"
+	myconf="${myconf} RELEASE=1"
+
 	use webkit || myconf="${myconf} NOUSEWEBKIT=1"
 	use exif && myconf="${myconf} GEOIMAGE=1" || myconf="${myconf} GEOIMAGE=0"
 	use proj && myconf="${myconf} PROJ=1" || myconf="${myconf} PROJ=0"
@@ -49,6 +48,6 @@ src_install() {
 	emake INSTALL_ROOT="${D}" install || die "install failed"
 	dodoc AUTHORS CHANGELOG HACKING || die "dodoc failed"
 
-	newicon Icons/Merkaartor_100x100.png "${PN}".png || die "newicon failed"
+	newicon Icons/Mercator_100x100.png "${PN}".png || die "newicon failed"
 	make_desktop_entry "${PN}" "Merkaartor" "${PN}" "Science;Geoscience"
 }
