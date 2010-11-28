@@ -33,8 +33,6 @@ src_prepare() {
 }
 
 src_compile() {
-	sed -i -e "/QTcpServer/a #include <QTcpSocket>" src/MainWindow.cpp
-
 	local myconf
 	use webkit || myconf="${myconf} NOUSEWEBKIT=1"
 	use exif && myconf="${myconf} GEOIMAGE=1" || myconf="${myconf} GEOIMAGE=0"
@@ -46,7 +44,7 @@ src_compile() {
 		lrelease src/src.pro || die "lrelease failed"
 	fi
 
-	eqmake4 Merkaartor.pro LIBDIR=$(get_libdir) PREFIX=/usr ${myconf} || die "eqmake4 failed"
+	eqmake4 Merkaartor.pro LIBDIR=/usr/$(get_libdir) PREFIX=/usr ${myconf} || die "eqmake4 failed"
 	emake || die "make failed"
 }
 
@@ -55,5 +53,4 @@ src_install() {
 	dodoc AUTHORS CHANGELOG HACKING || die "dodoc failed"
 
 	newicon Icons/Merkaartor_100x100.png "${PN}".png || die "newicon failed"
-	make_desktop_entry "${PN}" "Merkaartor" "${PN}" "Science;Geoscience"
 }
