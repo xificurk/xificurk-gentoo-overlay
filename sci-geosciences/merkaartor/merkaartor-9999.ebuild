@@ -2,7 +2,7 @@
 # Distributed under the terms of the GNU General Public License v2
 # $Header: $
 
-EAPI="1"
+EAPI="2"
 
 inherit eutils qt4 git
 
@@ -27,6 +27,10 @@ DEPEND="x11-libs/qt-gui:4
 RDEPEND="${DEPEND}"
 
 S="${WORKDIR}/${PN}"
+
+src_prepare() {
+	epatch "${FILESDIR}/timeout.diff"
+}
 
 src_compile() {
 	sed -i -e "/QTcpServer/a #include <QTcpSocket>" src/MainWindow.cpp

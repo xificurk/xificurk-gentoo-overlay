@@ -1,0 +1,12 @@
+diff -Naur merkaartor.old/src/QMapControl/mapnetwork.cpp merkaartor/src/QMapControl/mapnetwork.cpp
+--- merkaartor.old/src/QMapControl/mapnetwork.cpp	2010-11-28 15:12:11.000000000 +0100
++++ merkaartor/src/QMapControl/mapnetwork.cpp	2010-11-28 15:27:28.000000000 +0100
+@@ -79,7 +79,7 @@
+ 
+     QTimer* timeoutTimer = new QTimer();
+     connect(timeoutTimer, SIGNAL(timeout()), this, SLOT(timeout()));
+-    timeoutTimer->setInterval(5000);
++    timeoutTimer->setInterval(30000);
+     timeoutTimer->setSingleShot(true);
+ 
+     timeoutMap[timeoutTimer] = rply;
