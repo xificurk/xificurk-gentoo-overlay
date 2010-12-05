@@ -12,7 +12,7 @@ SRC_URI="http://tile.openstreetmap.org/world_boundaries-spherical.tgz
 LICENSE="CCPL-Attribution-ShareAlike-2.0"
 SLOT="0"
 
-KEYWORDS="~amd64 ~x86"
+KEYWORDS="amd64 x86"
 
 IUSE=""
 
