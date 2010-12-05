@@ -28,10 +28,6 @@ RDEPEND="${DEPEND}"
 
 S="${WORKDIR}/${PN}"
 
-src_prepare() {
-	epatch "${FILESDIR}/timeout.diff"
-}
-
 src_compile() {
 	local myconf
 	use webkit || myconf="${myconf} NOUSEWEBKIT=1"
