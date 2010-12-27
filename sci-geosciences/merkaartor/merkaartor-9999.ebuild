@@ -15,15 +15,16 @@ SRC_URI=""
 LICENSE="GPL-2"
 SLOT="0"
 KEYWORDS=""
-IUSE="nls webkit exif proj gdal gps"
-DEPEND="x11-libs/qt-gui:4
-	dev-libs/boost
+IUSE="nls webkit exif gps proxy"
+DEPEND=">=sci-libs/proj-4.7
+	>=sci-libs/gdal-1.6.0
+	x11-libs/qt-gui:4
+	|| ( >=x11-libs/qt-gui-4.7 >=dev-libs/boost-1.38 )
 	x11-libs/qt-svg:4
 	webkit? ( >=x11-libs/qt-webkit-4.3.3 )
 	exif? ( media-gfx/exiv2 )
-	proj? ( sci-libs/proj )
-	gdal? ( sci-libs/gdal )
-	gps?  ( sci-geosciences/gpsd )"
+	proxy? ( net-libs/libproxy )
+	gps?  ( >=sci-geosciences/gpsd-2.92 )"
 RDEPEND="${DEPEND}"
 
 S="${WORKDIR}/${PN}"
@@ -32,8 +33,7 @@ src_compile() {
 	local myconf
 	use webkit || myconf="${myconf} NOUSEWEBKIT=1"
 	use exif && myconf="${myconf} GEOIMAGE=1" || myconf="${myconf} GEOIMAGE=0"
-	use proj && myconf="${myconf} PROJ=1" || myconf="${myconf} PROJ=0"
-	use gdal && myconf="${myconf} GDAL=1" || myconf="${myconf} GDAL=0"
+	use proxy && myconf="${myconf} LIBPROXY=1" || myconf="${myconf} LIBPROXY=0"
 	use gps && myconf="${myconf} GPSDLIB=1" || myconf="${myconf} GPSDLIB=0"
 
 	if use nls; then
