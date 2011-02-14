@@ -8,7 +8,7 @@ inherit eutils qt4
 
 DESCRIPTION="A Qt4 based map editor for the openstreetmap.org project"
 HOMEPAGE="http://merkaartor.be/"
-SRC_URI="http://www.merkaartor.be/attachments/download/192/${P}.tar.bz2"
+SRC_URI="http://www.merkaartor.be/attachments/download/253/${P}.tar.bz2"
 LICENSE="GPL-2"
 SLOT="0"
 KEYWORDS="~amd64 ~x86"
