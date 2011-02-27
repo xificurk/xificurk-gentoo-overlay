@@ -8,11 +8,11 @@ inherit eutils
 
 DESCRIPTION="FreeRapid is a simple Java downloader that supports downloading from Rapidshare and other file-sharing services."
 HOMEPAGE="http://wordrider.net/freerapid"
-SRC_URI="http://wordrider.net/download.php?file=FreeRAPID-0.83U1.zip -> ${P}.zip"
+SRC_URI="http://wordrider.net/download.php?file=mirror0 -> ${P}u1.zip"
 
 LICENSE="GPL"
 KEYWORDS="x86 amd64"
-RESTRICT="nomirror"
+RESTRICT="fetch"
 
 IUSE=""
 SLOT="0"
@@ -20,8 +20,13 @@ DEPEND=">=virtual/jdk-1.6"
 RDEPEND=">=virtual/jre-1.6
 	app-misc/realpath"
 
-S="${WORKDIR}/FreeRapid-${PV%%0}u1"
+S="${WORKDIR}/FreeRapid-0.85u1-build566"
 INSTALLDIR="/opt/${PN}"
+
+pkg_nofetch() {
+    einfo "Please download freerapid-0.85u1.zip"
+    einfo "from ${HOMEPAGE} and place them in ${DISTDIR}"
+}
 
 pkg_setup () {
 	# create the group for update plugins (och meens One Click Hosting)
