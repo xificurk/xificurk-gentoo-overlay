@@ -1,0 +1,12 @@
+diff -ruN krusader.old//krusader/krslots.cpp krusader//krusader/krslots.cpp
+--- krusader.old//krusader/krslots.cpp	2010-12-25 23:37:52.000000000 +0100
++++ krusader//krusader/krslots.cpp	2011-05-12 18:27:54.669019711 +0200
+@@ -519,7 +519,7 @@
+     }
+ 
+     KProcess proc;
+-    proc << KrServices::fullPathName("kdesu") << KrServices::fullPathName("krusader")
++    proc << KrServices::fullPathName("kdesu") << "-c" << KrServices::fullPathName("krusader")
+     + " --left=" + MAIN_VIEW->left->func->files()->vfs_getOrigin().url()
+     + " --right=" + MAIN_VIEW->right->func->files()->vfs_getOrigin().url();
+ 
