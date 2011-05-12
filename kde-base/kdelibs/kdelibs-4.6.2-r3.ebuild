@@ -1,13 +1,15 @@
 # Copyright 1999-2011 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-x86/kde-base/kdelibs/kdelibs-4.4.5-r2.ebuild,v 1.4 2011/01/25 10:04:40 hwoarang Exp $
+# $Header: /var/cvsroot/gentoo-x86/kde-base/kdelibs/kdelibs-4.6.2-r3.ebuild,v 1.7 2011/05/10 19:48:48 dilfridge Exp $
 
-EAPI="3"
+EAPI=4
 
 CPPUNIT_REQUIRED="optional"
+DECLARATIVE_REQUIRED="always"
 OPENGL_REQUIRED="optional"
 WEBKIT_REQUIRED="always"
-inherit kde4-base fdo-mime
+KDE_SCM="git"
+inherit kde4-base fdo-mime toolchain-funcs
 
 DESCRIPTION="KDE libraries needed by all KDE programs."
 HOMEPAGE="http://www.kde.org/"
@@ -15,7 +17,7 @@ HOMEPAGE="http://www.kde.org/"
 KEYWORDS="amd64 ~arm ~ppc ~ppc64 x86 ~x86-fbsd ~amd64-linux ~x86-linux"
 LICENSE="LGPL-2.1"
 IUSE="3dnow acl alsa altivec bindist +bzip2 debug doc fam +handbook jpeg2k kerberos
-lzma mmx nls openexr policykit semantic-desktop spell sse sse2 ssl zeroconf"
+lzma mmx nls openexr +policykit semantic-desktop spell sse sse2 ssl +udev zeroconf"
 
 # needs the kate regression testsuite from svn
 RESTRICT="test"
@@ -23,7 +25,8 @@ RESTRICT="test"
 COMMONDEPEND="
 	app-crypt/qca:2
 	>=app-misc/strigi-0.6.3
-	~dev-libs/libattica-0.1.2
+	>=dev-libs/libattica-0.1.90
+	>=dev-libs/libdbusmenu-qt-0.3.2
 	dev-libs/libpcre[unicode]
 	dev-libs/libxml2
 	dev-libs/libxslt
@@ -31,7 +34,7 @@ COMMONDEPEND="
 	media-libs/freetype:2
 	media-libs/giflib
 	>=media-libs/libpng-1.4
-	>=media-sound/phonon-4.3.80
+	>=media-libs/phonon-4.4.3
 	sys-libs/zlib
 	virtual/jpeg
 	>=x11-misc/shared-mime-info-0.60
@@ -49,6 +52,7 @@ COMMONDEPEND="
 		x11-libs/libXft
 		x11-libs/libXpm
 		x11-libs/libXrender
+		x11-libs/libXScrnSaver
 		x11-libs/libXtst
 		!kernel_SunOS? ( sys-libs/libutempter )
 	)
@@ -61,13 +65,14 @@ COMMONDEPEND="
 		media-libs/openexr
 		media-libs/ilmbase
 	)
-	policykit? ( sys-auth/polkit-qt )
+	policykit? ( >=sys-auth/polkit-qt-0.99 )
 	semantic-desktop? (
-		>=dev-libs/shared-desktop-ontologies-0.2
-		>=dev-libs/soprano-2.3.73[dbus,raptor,redland]
+		>=dev-libs/shared-desktop-ontologies-0.5
+		>=dev-libs/soprano-2.5.63_pre[dbus,raptor,redland]
 	)
 	spell? ( app-text/enchant )
 	ssl? ( dev-libs/openssl )
+	udev? ( sys-fs/udev )
 	zeroconf? (
 		|| (
 			net-dns/avahi[mdnsresponder-compat]
@@ -76,6 +81,8 @@ COMMONDEPEND="
 	)
 "
 DEPEND="${COMMONDEPEND}
+	app-text/docbook-xml-dtd:4.2
+	app-text/docbook-xsl-stylesheets
 	doc? ( app-doc/doxygen )
 	nls? ( virtual/libintl )
 "
@@ -84,18 +91,25 @@ RDEPEND="${COMMONDEPEND}
 	!dev-libs/kunitconversion
 	!x11-libs/qt-phonon
 	!<=kde-misc/kdnssd-avahi-0.1.2:0
+	!<=kde-misc/knetworkmanager-4.4.0_p20100820
 	>=app-crypt/gnupg-2.0.11
 	app-misc/ca-certificates
 	$(add_kdebase_dep kde-env)
 	!aqua? (
+		sys-fs/udisks
+		sys-power/upower
 		x11-apps/iceauth
 		x11-apps/rgb
 		>=x11-misc/xdg-utils-1.0.2-r3
 	)
 "
 PDEPEND="
+	|| ( ( $(add_kdebase_dep kfmclient) ) x11-misc/xdg-utils )
 	handbook? ( $(add_kdebase_dep khelpcenter) )
-	policykit? ( >=sys-auth/polkit-kde-0.95.1 )
+	policykit? (
+		>=kde-misc/polkit-kde-kcmodules-0.98_pre20101127
+		>=sys-auth/polkit-kde-agent-0.99
+	)
 	semantic-desktop? ( $(add_kdebase_dep nepomuk) )
 "
 
@@ -103,6 +117,7 @@ PDEPEND="
 # as well as for file collisions
 add_blocker libknotificationitem
 add_blocker libkworkspace '<4.3.66'
+add_blocker kcontrol '<4.5.80'
 # @since 4.4 - kpilot is gone (blocker added to help upgrades)
 add_blocker kpilot
 # Block some old versions of KDE-3.5 packages that don't work well with KDE-4
@@ -114,22 +129,28 @@ add_blocker plasma-workspace '<4.3.75'
 
 PATCHES=(
 	"${FILESDIR}/dist/01_gentoo_set_xdg_menu_prefix.patch"
-	"${FILESDIR}/dist/02_gentoo_append_xdg_config_dirs.patch"
-	"${FILESDIR}/dist/23_solid_no_double_build.patch"
-	"${FILESDIR}/${PN}-4.3.80-module-suffix.patch"
-	"${FILESDIR}/${PN}-4.4.66-macos-unbundle.patch"
-	"${FILESDIR}/${PN}-4.3.3-klauncher_kdeinit.patch"
-	"${FILESDIR}/${PN}-4.3.3-klauncher_kioslave.patch"
-	"${FILESDIR}/${PN}-4.3.3-klauncher_mac.patch"
-	"${FILESDIR}/${PN}-4.4.3-mimetypes.patch"
+	"${FILESDIR}/dist/02_gentoo_append_xdg_config_dirs-1.patch"
+#	"${FILESDIR}/${PN}-4.5.73-module-suffix.patch" - FIXME what is this and why is it needed?
+#	"${FILESDIR}/${PN}-4.4.66-macos-unbundle.patch" - FIXME needs to be ported, also see above
+#	"${FILESDIR}/${PN}-4.3.3-klauncher_kioslave.patch" - FIXME is this really needed? if so, please upstream it
+#	"${FILESDIR}/${PN}-4.5.74-klauncher_mac.patch" - FIXME read above
+	"${FILESDIR}/${PN}-4.5.90-mimetypes.patch"
 	"${FILESDIR}/${PN}-4.4.90-xslt.patch"
-	"${FILESDIR}/${PN}-4.4.5-qt471.patch"
-	"${FILESDIR}/${PN}-4.4.5-formpainter.patch"
+	"${FILESDIR}/${PN}-4.6.0-kateacc.patch"
+	"${FILESDIR}/${PN}-4.6.2-nonepomuk.patch"
+	"${FILESDIR}/${PN}-4.6.3-no_suid_kdeinit.patch"
 	"${FILESDIR}/${PN}-4.4.5-alternate_globalshortcuts.patch"
 )
 
+pkg_pretend() {
+	[[ $(gcc-major-version) -lt 4 ]] || \
+			( [[ $(gcc-major-version) -eq 4 && $(gcc-minor-version) -le 3 ]] ) \
+		&& die "Sorry, but gcc-4.3 and earlier won't work for KDE SC 4.6 (see bug #354837)."
+}
+
 src_prepare() {
 	kde4-base_src_prepare
+	use arm && epatch "${FILESDIR}/${PN}-4.6.2-armlinking.patch"
 
 	# Rename applications.menu (needs 01_gentoo_set_xdg_menu_prefix.patch to work)
 	local menu_prefix="kde-${SLOT}-"
@@ -220,6 +241,7 @@ src_configure() {
 		$(cmake-utils_use_with semantic-desktop SharedDesktopOntologies)
 		$(cmake-utils_use_with spell ENCHANT)
 		$(cmake-utils_use_with ssl OpenSSL)
+		$(cmake-utils_use_with udev UDev)
 	)
 	kde4-base_src_configure
 }
@@ -241,13 +263,13 @@ src_install() {
 	# use system certificates
 	rm -f "${ED}/${KDEDIR}"/share/apps/kssl/ca-bundle.crt || die
 	dosym /etc/ssl/certs/ca-certificates.crt \
-	"${KDEDIR}"/share/apps/kssl/ca-bundle.crt || die
+	"${KDEDIR}"/share/apps/kssl/ca-bundle.crt
 
 	if use doc; then
 		einfo "Installing API documentation. This could take a bit of time."
 		cd "${S}"/doc/api/
 		docinto /HTML/en/kdelibs-apidox
-		dohtml -r ${P}-apidocs/* || die "Install phase of KDE4 API Documentation failed"
+		dohtml -r ${P}-apidocs/*
 	fi
 
 	if use aqua; then
@@ -268,6 +290,11 @@ src_install() {
 			"${ED}"/${KDEDIR}/share/apps/cmake/modules/FindXKB.cmake \
 			|| die "failed fixing FindXKB.cmake"
 	fi
+
+	einfo Installing environment file.
+	echo "COLON_SEPARATED=QT_PLUGIN_PATH" > "${T}/77kde"
+	echo "QT_PLUGIN_PATH=${EKDEDIR}/$(get_libdir)/kde4/plugins" >> "${T}/77kde"
+	doenvd "${T}/77kde"
 }
 
 pkg_postinst() {
@@ -285,15 +312,22 @@ pkg_postinst() {
 		echo
 	fi
 
+	if has_version 'net-libs/libproxy'; then
+		echo
+		elog "You have net-libs/libproxy installed. This may lead to serious problems, e.g."
+		elog "not being able to log in. We used to prohibit that combination via a blocker,"
+		elog "however the blocker has been removed because of popular request. Now everyone"
+		elog "may shoot himself in the foot as much as he wants."
+		ewarn "If you encounter timeouts and/or hangs, please have a look at bug 365479,"
+		ewarn "https://bugs.gentoo.org/show_bug.cgi?id=365479"
+	fi
+
 	elog "Your homedir is set to \${HOME}/${HME}"
 	echo
 
-	if ! has_version sys-apps/hal; then
-		echo
-		ewarn "You need sys-apps/hal for new device notifications, power management and any"
-		ewarn "other hardware related functionalities to work."
-		echo
-	fi
+	ewarn "In case you just upgraded from KDE 4.4.5 to KDE 4.6.2 (e.g. as stable tree user),"
+	ewarn "you may want to have a look at the Gentoo KDE 4.4 - 4.6 upgrade guide:"
+	ewarn "     http://www.gentoo.org/proj/en/desktop/kde/kde44-46-upgrade.xml"
 
 	kde4-base_pkg_postinst
 }

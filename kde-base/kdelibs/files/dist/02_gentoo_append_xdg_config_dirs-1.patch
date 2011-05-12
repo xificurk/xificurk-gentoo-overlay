@@ -14,17 +14,17 @@ Index: kdecore/kernel/kstandarddirs.cpp
 -    else
 -    {
 -        xdgdirList.clear();
--        xdgdirList.append("/etc/xdg");
+-        xdgdirList.append(QString::fromLatin1("/etc/xdg"));
 +
  #ifdef Q_WS_WIN
--        xdgdirList.append(installPath("kdedir") + "etc/xdg");
-+    xdgdirList.append(installPath("kdedir") + "etc/xdg");
+-        xdgdirList.append(installPath("kdedir") + QString::fromLatin1("etc/xdg"));
++    xdgdirList.append(installPath("kdedir") + QString::fromLatin1("etc/xdg"));
  #else
--        xdgdirList.append(KDESYSCONFDIR "/xdg");
-+    xdgdirList.append(KDESYSCONFDIR "/xdg");
+-        xdgdirList.append(QFile::decodeName(KDESYSCONFDIR "/xdg"));
++    xdgdirList.append(QFile::decodeName(KDESYSCONFDIR "/xdg"));
  #endif
 -    }
-+    xdgdirList.append("/etc/xdg");
++    xdgdirList.append(QString::fromLatin1("/etc/xdg"));
  
      QString localXdgDir = readEnvPath("XDG_CONFIG_HOME");
      if (!localXdgDir.isEmpty())

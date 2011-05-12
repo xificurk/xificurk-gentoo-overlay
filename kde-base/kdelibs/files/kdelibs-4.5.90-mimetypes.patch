@@ -1,8 +1,8 @@
-diff -r -u kdelibs-4.4.3.orig/mimetypes/kde.xml kdelibs-4.4.3/mimetypes/kde.xml
---- kdelibs-4.4.3.orig/mimetypes/kde.xml	2009-10-06 23:37:48.000000000 +0200
-+++ kdelibs-4.4.3/mimetypes/kde.xml	2010-05-28 22:48:51.000000000 +0200
-@@ -180,41 +180,6 @@
-     <root-XML namespaceURI="http://www.gribuser.ru/xml/fictionbook/2.0" localName="FictionBook"/>
+diff -ur kdelibs-4.5.90.orig/mimetypes/kde.xml kdelibs-4.5.90/mimetypes/kde.xml
+--- kdelibs-4.5.90.orig/mimetypes/kde.xml	2010-12-22 10:56:01.000000000 +0100
++++ kdelibs-4.5.90/mimetypes/kde.xml	2010-12-23 11:31:53.000000000 +0100
+@@ -178,34 +178,6 @@
+     <glob pattern="*.abc"/>
    </mime-type>
  
 -  <!-- all/ fake mime types -->
@@ -33,17 +33,10 @@ diff -r -u kdelibs-4.4.3.orig/mimetypes/kde.xml kdelibs-4.4.3/mimetypes/kde.xml
 -    <comment>rtspu: URIs</comment>
 -  </mime-type>
 -
--  <!-- fonts/ fake mime types -->
--  <mime-type type="fonts/package">
--    <sub-class-of type="application/zip"/>
--    <comment>fonts package</comment>
--    <glob pattern="*.fonts.zip"/>
--  </mime-type>
--
-   <mime-type type="application/x-konsole">
-     <comment>file to open a shell</comment>
-     <glob pattern="*.shell"/>
-@@ -349,12 +314,6 @@
+   <mime-type type="application/vnd.kde.fontspackage">
+     <sub-class-of type="application/zip"/>
+     <comment>fonts package</comment>
+@@ -346,12 +318,6 @@
      <glob pattern="*.icq"/>
    </mime-type>
  
