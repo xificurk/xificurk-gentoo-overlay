@@ -1,10 +1,10 @@
-# Copyright 1999-2010 Gentoo Foundation
+# Copyright 1999-2011 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 # $Header: $
 
-EAPI="3"
+EAPI=4
 
-inherit eutils autotools subversion flag-o-matic
+inherit autotools subversion
 
 ESVN_REPO_URI="http://svn.openstreetmap.org/applications/utils/export/${PN}/"
 ESVN_PROJECT="${PN}"
@@ -21,7 +21,7 @@ IUSE=""
 DEPEND="
 	app-arch/bzip2
 	dev-db/postgis
-	dev-libs/libxml2
+	dev-libs/libxml2:2
 	sci-libs/geos
 	sci-libs/proj
 	sys-libs/zlib
@@ -29,17 +29,9 @@ DEPEND="
 "
 RDEPEND="${DEPEND}"
 
-pkg_setup() {
-    append-ldflags $(no-as-needed)
-}
+DOCS=( README 900913.sql )
 
 src_prepare() {
 	esvn_clean
 	eautoreconf
-}
-
-src_install() {
-	emake DESTDIR="${D}" install || die "install failed"
-
-	dodoc README || die "dodoc failed"
 }
