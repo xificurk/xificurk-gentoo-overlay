@@ -1,11 +1,12 @@
---- SConstruct~	2011-07-28 13:31:33.561974713 +0200
-+++ SConstruct	2011-07-28 13:31:33.562974732 +0200
-@@ -335,10 +335,12 @@
+diff -uNr SConstruct SConstruct
+--- SConstruct	2011-08-17 09:37:55.000000000 +0200
++++ SConstruct	2011-08-17 10:29:37.522022846 +0200
+@@ -344,10 +344,12 @@
      PathVariable('TIFF_LIBS', 'Search path for libtiff library files', '/usr/' + LIBDIR_SCHEMA, PathVariable.PathAccept),
      PathVariable('PROJ_INCLUDES', 'Search path for PROJ.4 include files', '/usr/include', PathVariable.PathAccept),
      PathVariable('PROJ_LIBS', 'Search path for PROJ.4 library files', '/usr/' + LIBDIR_SCHEMA, PathVariable.PathAccept),
 +    PathVariable('AGG_INCLUDES', 'Search path for AGG include files', '/usr/include/agg2', PathVariable.PathAccept),                                                                                                                                                          
-+    PathVariable('AGG_LIBS', 'Search path for AGG library files', '/usr/' + LIBDIR_SCHEMA, PathVariable.PathAccept),                                                                                                                                                          
++    PathVariable('AGG_LIBS', 'Search path for AGG library files', '/usr/' + LIBDIR_SCHEMA, PathVariable.PathAccept),
      ('PKG_CONFIG_PATH', 'Use this path to point pkg-config to .pc files instead of the PKG_CONFIG_PATH environment setting',''),
      
      # Variables affecting rendering back-ends
@@ -14,7 +15,7 @@
  
      BoolVariable('SVG_RENDERER', 'build support for native svg renderer', 'False'),
      
-@@ -1009,6 +1011,7 @@
+@@ -1072,6 +1074,7 @@
          ['z', 'zlib.h', True,'C'],
          ['proj', 'proj_api.h', True,'C'],
          [env['ICU_LIB_NAME'],'unicode/unistr.h',True,'C++'],
@@ -22,16 +23,15 @@
      ]
  
      if env['JPEG']:
- 
- 
---- src/SConscript	2011-07-28 13:14:10.120589487 +0200
-+++ src/SConscript	2011-07-28 13:14:10.121589506 +0200
+diff -uNr src/SConscript src/SConscript
+--- src/SConscript	2011-08-17 09:37:55.000000000 +0200
++++ src/SConscript	2011-08-17 10:32:09.170504987 +0200
 @@ -52,7 +52,7 @@
- filesystem = 'boost_filesystem%s' % env['BOOST_APPEND']
  regex = 'boost_regex%s' % env['BOOST_APPEND']
  
--libraries = ['freetype','ltdl','png','tiff','z','jpeg','proj',env['ICU_LIB_NAME'],filesystem,regex]
-+libraries = ['freetype','ltdl','png','tiff','z','jpeg','proj',env['ICU_LIB_NAME'],'agg',filesystem,regex]
+ # clear out and re-set libs for this env
+-lib_env['LIBS'] = ['freetype','ltdl','png','tiff','z','jpeg','proj',env['ICU_LIB_NAME'],filesystem,regex]
++lib_env['LIBS'] = ['freetype','ltdl','png','tiff','z','jpeg','proj',env['ICU_LIB_NAME'],'agg',filesystem,regex]
  
  if env['HAS_CAIRO']:
      # add cairo and cairomm-1.0 to libs

@@ -1,16 +1,16 @@
---- src/SConscript	2011-07-28 19:26:37.401655510 +0200
-+++ src/SConscript	2011-07-28 19:30:13.521459498 +0200
-@@ -36,9 +36,6 @@
+--- src/SConscript	2011-08-17 10:40:02.049638844 +0200
++++ src/SConscript	2011-08-17 10:40:02.050638835 +0200
+@@ -37,9 +37,6 @@
      elif not silent:
          print stderr
  
 -def ldconfig(*args,**kwargs):
 -    call('ldconfig')
 -
- mapnik_lib_link_flag = ''
  
- ABI_VERSION = env['ABI_VERSION']
-@@ -285,8 +282,6 @@
+ if env['LINKING'] == 'static':
+     lib_env.Append(CXXFLAGS="-fPIC")
+@@ -309,8 +306,6 @@
      if 'uninstall' not in COMMAND_LINE_TARGETS:
        result = env.InstallAs(target=target, source=mapnik)
        env.Alias(target='install', source=result)
