@@ -56,6 +56,7 @@ src_prepare() {
 	rm -rf agg || die
 	epatch "${FILESDIR}"/${PN}-libagg.patch
 	epatch "${FILESDIR}"/${PN}-ldconfig.patch
+	epatch "${FILESDIR}"/offset.patch
 }
 
 src_configure() {
