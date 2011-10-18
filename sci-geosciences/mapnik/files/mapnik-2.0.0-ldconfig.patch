@@ -1,16 +1,18 @@
---- src/SConscript	2011-08-17 10:40:02.049638844 +0200
-+++ src/SConscript	2011-08-17 10:40:02.050638835 +0200
-@@ -37,9 +37,6 @@
+diff --git a/src/build.py b/src/build.py
+index b4b725b..075bf8c 100644
+--- a/src/build.py
++++ b/src/build.py
+@@ -37,9 +37,6 @@ def call(cmd, silent=True):
      elif not silent:
          print stderr
  
 -def ldconfig(*args,**kwargs):
 -    call('ldconfig')
 -
- 
  if env['LINKING'] == 'static':
      lib_env.Append(CXXFLAGS="-fPIC")
-@@ -309,8 +306,6 @@
+ 
+@@ -326,8 +323,6 @@ if env['PLATFORM'] != 'Darwin':
      if 'uninstall' not in COMMAND_LINE_TARGETS:
        result = env.InstallAs(target=target, source=mapnik)
        env.Alias(target='install', source=result)
@@ -19,3 +21,6 @@
  
      
      # Install symlinks
+-- 
+1.7.3.4
+

@@ -5,12 +5,11 @@
 EAPI=3
 
 PYTHON_DEPEND="python? 2"
-inherit eutils scons-utils toolchain-funcs python versionator git-2
-
-EGIT_REPO_URI="git://github.com/${PN}/${PN}.git"
+inherit eutils scons-utils toolchain-funcs python versionator
 
 DESCRIPTION="A Free Toolkit for developing mapping applications."
 HOMEPAGE="http://www.mapnik.org/"
+SRC_URI="mirror://berlios/${PN}/${P}.tar.bz2"
 
 LICENSE="LGPL-2.1"
 SLOT="2"
@@ -48,9 +47,9 @@ DEPEND="${RDEPEND}
 
 src_prepare() {
 	rm -rf agg || die
-	epatch "${FILESDIR}/${PN}-2.0.0-libagg.patch"
-	epatch "${FILESDIR}/${PN}-2.0.0-ldconfig.patch"
-	epatch "${FILESDIR}/${PN}-2.0.0-line-offset.patch"
+	epatch "${FILESDIR}/${P}-libagg.patch"
+	epatch "${FILESDIR}/${P}-ldconfig.patch"
+	epatch "${FILESDIR}/${P}-line-offset.patch"
 }
 
 src_configure() {
@@ -111,7 +110,7 @@ src_compile() {
 	# "die" after the epydoc script (see bug #370575)
 	if use doc && use python; then
 		export PYTHONPATH="${S}/bindings/python:$(python_get_sitedir)"
-		cd utils/epydoc_config && ./build_epydoc.sh
+		cd docs/epydoc_config && ./build_epydoc.sh
 		cd -
 	fi
 }
@@ -120,11 +119,12 @@ src_install() {
 	escons DESTDIR="${D}" install || die "scons install failed"
 
 	if use python ; then
+		fperms 0644 "$(python_get_sitedir)"/mapnik2/paths.py
 		dobin utils/stats/mapdef_stats.py
 		insinto /usr/share/doc/${PF}/examples
 		doins utils/ogcserver/*
 	fi
 
-	dodoc AUTHORS.md CHANGELOG README.md || die
-	use doc && use python && { dohtml -r utils/api_docs/python/* || die "API doc install failed"; }
+	dodoc AUTHORS CHANGELOG README || die
+	use doc && use python && { dohtml -r docs/api_docs/python/* || die "API doc install failed"; }
 }
