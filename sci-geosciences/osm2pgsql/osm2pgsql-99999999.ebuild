@@ -16,7 +16,7 @@ SRC_URI=""
 LICENSE="GPL-2"
 SLOT="0"
 KEYWORDS=""
-IUSE=""
+IUSE="pbf"
 
 DEPEND="
 	app-arch/bzip2
@@ -26,7 +26,8 @@ DEPEND="
 	sci-libs/proj
 	sys-libs/zlib
 	dev-db/postgresql-base
-"
+	pbf? ( dev-libs/protobuf-c )"
+
 RDEPEND="${DEPEND}"
 
 DOCS=( README 900913.sql )
