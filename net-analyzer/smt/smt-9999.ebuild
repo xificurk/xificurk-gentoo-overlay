@@ -33,8 +33,9 @@ src_install() {
 	python-distutils-ng_newscript bin/smtd smtd
 
 	# install example plugins configuration
-	insinto /etc/smt
-	newins config/plugins.py plugins.py
+	keepdir /etc/smt/plugins
+	insinto /etc/smt/plugins
+	newins config/plugins.py __init__.py
 
 	# install init script and its configuration
 	newinitd gentoo/smt-init smt
