@@ -1,0 +1,14 @@
+diff -ruN postgis-2.0.1.old/postgis/lwgeom_in_gml.c postgis-2.0.1/postgis/lwgeom_in_gml.c
+--- postgis-2.0.1.old/postgis/lwgeom_in_gml.c	2012-02-27 23:08:12.000000000 +0100
++++ postgis-2.0.1/postgis/lwgeom_in_gml.c	2012-09-10 12:40:48.819482507 +0200
+@@ -1168,6 +1168,10 @@
+ 		}
+ 	}
+ 
++	/* Found an <exterior> or <outerBoundaryIs> but no rings?!? We're outa here! */
++	if ( ! ppa )
++		gml_lwerror("invalid GML representation", 43);  
++	
+ 	for (ring=1, xa = xnode->children ; xa != NULL ; xa = xa->next)
+ 	{
+ 		/* Polygon/innerBoundaryIs -> GML 2.1.2 */
