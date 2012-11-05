@@ -1,0 +1,13 @@
+Seulement dans mapnik-v2.1.0: patch
+diff -ur mapnik-v2.1.0.orig/SConstruct mapnik-v2.1.0/SConstruct
+--- mapnik-v2.1.0.orig/SConstruct	2012-09-04 14:00:45.133101899 +0200
++++ mapnik-v2.1.0/SConstruct	2012-09-04 14:02:04.513794207 +0200
+@@ -1362,7 +1362,7 @@
+                 site_packages = '''%s -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(plat_specific=True))"''' % env['PYTHON']
+             else:
+                 site_packages = '''%s -c "from distutils.sysconfig import get_python_lib; print get_python_lib(plat_specific=True)"''' % env['PYTHON']
+-            env['PYTHON_SITE_PACKAGES'] = call(site_packages)
++            env['PYTHON_SITE_PACKAGES'] = os.path.normpath(os.path.realpath(env['DESTDIR'])) + call(site_packages)
+         else:
+             env['PYTHON_SYS_PREFIX'] = os.popen('''%s -c "import sys; print sys.prefix"''' % env['PYTHON']).read().strip()
+             env['PYTHON_VERSION'] = os.popen('''%s -c "import sys; print sys.version"''' % env['PYTHON']).read()[0:3]
