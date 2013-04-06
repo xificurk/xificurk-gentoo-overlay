@@ -4,10 +4,9 @@
 
 EAPI=4
 
-inherit autotools subversion
+inherit autotools git-2
 
-ESVN_REPO_URI="http://svn.openstreetmap.org/applications/utils/export/${PN}/"
-ESVN_PROJECT="${PN}"
+EGIT_REPO_URI="git://github.com/openstreetmap/${PN}.git"
 
 DESCRIPTION="Converts OSM data to SQL and insert into PostgreSQL db"
 HOMEPAGE="http://wiki.openstreetmap.org/wiki/Osm2pgsql"
@@ -31,8 +30,3 @@ DEPEND="
 RDEPEND="${DEPEND}"
 
 DOCS=( README 900913.sql )
-
-src_prepare() {
-	esvn_clean
-	eautoreconf
-}
