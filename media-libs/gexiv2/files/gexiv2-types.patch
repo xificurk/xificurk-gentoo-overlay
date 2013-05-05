@@ -1,0 +1,162 @@
+diff -uNr gexiv2.old/gexiv2-metadata.cpp gexiv2/gexiv2-metadata.cpp
+--- gexiv2.old/gexiv2-metadata.cpp	2013-03-18 23:16:44.000000000 +0100
++++ gexiv2/gexiv2-metadata.cpp	2013-05-05 19:14:39.915287275 +0200
+@@ -878,4 +878,19 @@
+     return NULL;
+ }
+ 
++const gchar* gexiv2_metadata_get_tag_type (const gchar *tag) {
++    g_return_val_if_fail(tag != NULL, NULL);
++    
++    if (gexiv2_metadata_is_xmp_tag(tag))
++        return gexiv2_metadata_get_xmp_tag_type(tag);
++    
++    if (gexiv2_metadata_is_exif_tag(tag))
++        return gexiv2_metadata_get_exif_tag_type(tag);
++    
++    if (gexiv2_metadata_is_iptc_tag(tag))
++        return gexiv2_metadata_get_iptc_tag_type(tag);
++    
++    return NULL;
++}
++
+ G_END_DECLS
+diff -uNr gexiv2.old/gexiv2-metadata-exif.cpp gexiv2/gexiv2-metadata-exif.cpp
+--- gexiv2.old/gexiv2-metadata-exif.cpp	2013-03-18 23:16:44.000000000 +0100
++++ gexiv2/gexiv2-metadata-exif.cpp	2013-05-05 19:12:34.602293362 +0200
+@@ -272,4 +272,17 @@
+     return NULL;
+ }
+ 
++const gchar* gexiv2_metadata_get_exif_tag_type (const gchar* tag) {
++    g_return_val_if_fail(tag != NULL, NULL);
++    
++    try {
++        Exiv2::ExifKey key(tag);
++        return Exiv2::TypeInfo::typeName(key.defaultTypeId());
++    } catch (Exiv2::Error& e) {
++        LOG_ERROR(e);
++    }
++    
++    return NULL;
++}
++
+ G_END_DECLS
+diff -uNr gexiv2.old/gexiv2-metadata.h gexiv2/gexiv2-metadata.h
+--- gexiv2.old/gexiv2-metadata.h	2013-03-18 23:16:44.000000000 +0100
++++ gexiv2/gexiv2-metadata.h	2013-05-05 18:37:36.948529946 +0200
+@@ -206,6 +206,14 @@
+  */
+ const gchar*	gexiv2_metadata_get_tag_description	(const gchar *tag);
+ 
++/**
++ * gexiv2_metadata_get_tag_type:
++ * @tag: Name of the tag who's type you want
++ *
++ * Returns: (transfer none) (allow-none): The tag's type
++ */
++const gchar*	gexiv2_metadata_get_tag_type	(const gchar *tag);
++
+ 
+ /**
+  * EXIF functions
+diff -uNr gexiv2.old/gexiv2-metadata-iptc.cpp gexiv2/gexiv2-metadata-iptc.cpp
+--- gexiv2.old/gexiv2-metadata-iptc.cpp	2013-03-18 23:16:44.000000000 +0100
++++ gexiv2/gexiv2-metadata-iptc.cpp	2013-05-05 18:27:37.951061889 +0200
+@@ -262,4 +262,17 @@
+     return NULL;
+ }
+ 
++const gchar* gexiv2_metadata_get_iptc_tag_type (const gchar* tag) {
++    g_return_val_if_fail(tag != NULL, NULL);
++    
++    try {
++        Exiv2::IptcKey key (tag);
++        return Exiv2::TypeInfo::typeName(Exiv2::IptcDataSets::dataSetType(key.tag(), key.record()));
++    } catch (Exiv2::Error& e) {
++        LOG_ERROR(e);
++    }
++    
++    return NULL;
++}
++
+ G_END_DECLS
+diff -uNr gexiv2.old/gexiv2-metadata-private.h gexiv2/gexiv2-metadata-private.h
+--- gexiv2.old/gexiv2-metadata-private.h	2013-03-18 23:16:44.000000000 +0100
++++ gexiv2/gexiv2-metadata-private.h	2013-05-05 19:12:49.423414566 +0200
+@@ -48,6 +48,7 @@
+ 
+ const gchar*	gexiv2_metadata_get_exif_tag_label	(const gchar* tag);
+ const gchar*	gexiv2_metadata_get_exif_tag_description (const gchar* tag);
++const gchar*	gexiv2_metadata_get_exif_tag_type (const gchar* tag);
+ 
+ /* private XMP functions */
+ 
+@@ -63,6 +64,7 @@
+ 
+ const gchar*	gexiv2_metadata_get_xmp_tag_label		(const gchar* tag);
+ const gchar*	gexiv2_metadata_get_xmp_tag_description	(const gchar* tag);
++const gchar*	gexiv2_metadata_get_xmp_tag_type	(const gchar* tag);
+ 
+ /* private IPTC functions */
+ 
+@@ -76,6 +78,7 @@
+ 
+ const gchar*	gexiv2_metadata_get_iptc_tag_label	(const gchar* tag);
+ const gchar*	gexiv2_metadata_get_iptc_tag_description	(const gchar* tag);
++const gchar*	gexiv2_metadata_get_iptc_tag_type	(const gchar* tag);
+ 
+ 
+ G_END_DECLS
+diff -uNr gexiv2.old/gexiv2-metadata-xmp.cpp gexiv2/gexiv2-metadata-xmp.cpp
+--- gexiv2.old/gexiv2-metadata-xmp.cpp	2013-03-18 23:16:44.000000000 +0100
++++ gexiv2/gexiv2-metadata-xmp.cpp	2013-05-05 18:28:57.871058299 +0200
+@@ -300,6 +300,18 @@
+     return NULL;
+ }
+ 
++const gchar* gexiv2_metadata_get_xmp_tag_type (const gchar* tag) {
++    g_return_val_if_fail(tag != NULL, NULL);
++    
++    try {
++        return Exiv2::TypeInfo::typeName(Exiv2::XmpProperties::propertyType(Exiv2::XmpKey(tag)));
++    } catch (Exiv2::Error& e) {
++        LOG_ERROR(e);
++    }
++    
++    return NULL;
++}
++
+ gboolean gexiv2_metadata_register_xmp_namespace (const gchar* name, const gchar* prefix) {
+     g_return_val_if_fail(name != NULL, FALSE);
+     g_return_val_if_fail(prefix != NULL, FALSE);
+diff -uNr gexiv2.old/gexiv2-startup.cpp gexiv2/gexiv2-startup.cpp
+--- gexiv2.old/gexiv2-startup.cpp	2013-03-18 23:16:44.000000000 +0100
++++ gexiv2/gexiv2-startup.cpp	2013-04-29 08:51:25.000000000 +0200
+@@ -6,7 +6,7 @@
+  *
+  * This is free software. See COPYING for details.
+  */
+-
++ 
+ #include <exiv2/xmp.hpp>
+ #include "gexiv2-startup.h"
+ 
+diff -uNr gexiv2.old/gexiv2-stream-io.h gexiv2/gexiv2-stream-io.h
+--- gexiv2.old/gexiv2-stream-io.h	2013-03-18 23:16:44.000000000 +0100
++++ gexiv2/gexiv2-stream-io.h	2013-04-29 08:51:25.000000000 +0200
+@@ -7,11 +7,14 @@
+  * This is free software. See COPYING for details.
+  */
+ 
++
+ /*
+  * The class StreamIo is derived from BasicIo to provide usage of a
+  * ManagedStream to exiv2.
+  */
+ 
++
++
+ #ifndef __GEXIV2_STREAM_IO_H__
+ #define __GEXIV2_STREAM_IO_H__
+ 
