@@ -35,6 +35,7 @@ src_prepare() {
 	epatch "${FILESDIR}/${PN}"-types.patch
 	epatch "${FILESDIR}/${PN}"-langalt.patch
 	epatch "${FILESDIR}/${PN}"-repeatable.patch
+	epatch "${FILESDIR}/${PN}"-comment.patch
 	tc-export CXX
 	sed -e 's:CFLAGS:CXXFLAGS:g' -i Makefile || die
 }
