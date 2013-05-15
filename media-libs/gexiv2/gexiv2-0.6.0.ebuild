@@ -34,6 +34,7 @@ S=${WORKDIR}/lib${P}
 src_prepare() {
 	epatch "${FILESDIR}/${PN}"-types.patch
 	epatch "${FILESDIR}/${PN}"-langalt.patch
+	epatch "${FILESDIR}/${PN}"-repeatable.patch
 	tc-export CXX
 	sed -e 's:CFLAGS:CXXFLAGS:g' -i Makefile || die
 }
