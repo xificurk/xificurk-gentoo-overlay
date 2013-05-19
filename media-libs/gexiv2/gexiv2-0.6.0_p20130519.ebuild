@@ -37,6 +37,7 @@ src_prepare() {
 	epatch "${FILESDIR}/${PN}-${MY_PV3}"-internal-comment.patch
 	epatch "${FILESDIR}/${PN}-${MY_PV3}"-repeatable.patch
 	epatch "${FILESDIR}/${PN}-${MY_PV3}"-zero-size.patch
+	epatch "${FILESDIR}/${PN}-${MY_PV3}"-langalt.patch
 	tc-export CXX
 	sed -e 's:CFLAGS:CXXFLAGS:g' -i Makefile || die
 }
