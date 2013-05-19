@@ -8,11 +8,12 @@ PYTHON_COMPAT=( python{2_5,2_6,2_7,3_1,3_2,3_3} )
 
 inherit eutils multilib python-r1 toolchain-funcs versionator
 
-MY_PV=$(get_version_component_range 1-2)
+MY_PV2=$(get_version_component_range 1-2)
+MY_PV3=$(get_version_component_range 1-3)
 
 DESCRIPTION="GObject-based wrapper around the Exiv2 library."
 HOMEPAGE="http://trac.yorba.org/wiki/gexiv2/"
-SRC_URI="http://www.yorba.org/download/${PN}/${MY_PV}/lib${PN}_${PV}.tar.xz"
+SRC_URI="http://www.yorba.org/download/${PN}/${MY_PV2}/lib${PN}_${MY_PV3}.tar.xz"
 
 LICENSE="LGPL-2.1"
 SLOT="0"
@@ -29,13 +30,13 @@ RDEPEND="
 DEPEND="${RDEPEND}
 	virtual/pkgconfig"
 
-S=${WORKDIR}/lib${P}
+S=${WORKDIR}/lib${PN}-${MY_PV3}
 
 src_prepare() {
-	epatch "${FILESDIR}/${PN}"-types.patch
-	epatch "${FILESDIR}/${PN}"-langalt.patch
-	epatch "${FILESDIR}/${PN}"-repeatable.patch
-	epatch "${FILESDIR}/${PN}"-comment.patch
+	epatch "${FILESDIR}/${PN}-${MY_PV3}"-types.patch
+	epatch "${FILESDIR}/${PN}-${MY_PV3}"-internal-comment.patch
+	epatch "${FILESDIR}/${PN}-${MY_PV3}"-repeatable.patch
+	epatch "${FILESDIR}/${PN}-${MY_PV3}"-zero-size.patch
 	tc-export CXX
 	sed -e 's:CFLAGS:CXXFLAGS:g' -i Makefile || die
 }
