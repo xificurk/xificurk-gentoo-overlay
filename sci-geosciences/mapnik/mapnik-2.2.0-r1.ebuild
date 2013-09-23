@@ -86,7 +86,7 @@ src_configure() {
 		"PROJ_LIBS=/usr/$(get_libdir)"
 		"SYSTEM_FONTS=/usr/share/fonts"
 		$(use_scons python BINDINGS all none)
-		$(use_scons python PYTHON $PYTHON)
+		$(use python && use_scons python PYTHON $PYTHON)
 		$(use_scons python BOOST_PYTHON_LIB boost_python-$(echo $EPYTHON | sed 's/python//'))
 		$(use_scons cairo CAIRO)
 		$(use_scons debug DEBUG)
