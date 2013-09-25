@@ -64,6 +64,13 @@ src_prepare() {
 	sed -i \
 		-e 's:-`mapnik-config --version`::g' \
 		utils/epydoc_config/build_epydoc.sh || die
+
+	# force user flags, optimization level
+	sed -i -e "s:\-O%s:%s:" \
+		-i -e "s:env\['OPTIMIZATION'\]:'${CXXFLAGS}':" \
+		SConstruct || die
+
+	epatch_user
 }
 
 src_configure() {
@@ -97,10 +104,6 @@ src_configure() {
 		"CUSTOM_LDFLAGS+=-L${ED}/usr/$(get_libdir)"
 	)
 
-	# force user flags, optimization level
-	sed -i -e "s:\-O%s:%s:" \
-		-i -e "s:env\['OPTIMIZATION'\]:'${CXXFLAGS}':" \
-		SConstruct || die "sed 3 failed"
 	escons configure
 }
 
