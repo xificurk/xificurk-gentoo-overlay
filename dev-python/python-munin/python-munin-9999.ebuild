@@ -4,10 +4,10 @@
 
 EAPI="4"
 
-PYTHON_COMPAT="python2_5 python2_6 python2_7"
+PYTHON_COMPAT=( python{2_5,2_6,2_7} )
 EGIT_REPO_URI="git://github.com/samuel/python-munin"
 
-inherit git-2 python-distutils-ng
+inherit git-2 distutils-r1
 
 DESCRIPTION="Helper classes for writing plugins for the server monitoring tool Munin."
 HOMEPAGE="http://samuelks.com/python-munin/"
