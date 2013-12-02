@@ -34,11 +34,11 @@ python_install() {
 	# install scripts
 	local python_scriptroot=/usr/sbin
 	python_doscript bin/smtd
-	fowners smt:smt "${python_scriptroot}/smtd-${EPYTHON}"
-	fperms 750 "${python_scriptroot}/smtd-${EPYTHON}"
+	fowners smt:smt "/usr/lib/python-exec/${EPYTHON}/smtd"
+	fperms 750 "/usr/lib/python-exec/${EPYTHON}/smtd"
 	python_doscript bin/smt-limits
-	fowners smt:smt "${python_scriptroot}/smt-limits-${EPYTHON}"
-	fperms 750 "${python_scriptroot}/smt-limits-${EPYTHON}"
+	fowners smt:smt "/usr/lib/python-exec/${EPYTHON}/smt-limits"
+	fperms 750 "/usr/lib/python-exec/${EPYTHON}/smt-limits"
 }
 
 src_install() {
