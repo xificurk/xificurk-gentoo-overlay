@@ -1,0 +1,8 @@
+/var/log/nfs_automount.log {
+    weekly
+    rotate 4
+    compress
+    copytruncate
+    missingok
+    notifempty
+}
