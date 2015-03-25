@@ -4,9 +4,9 @@
 # $Header: $
 
 depend() {
-	after cupsd iptables lm_sensors net
+	need net
 	use dns
-	after bootmisc
+	after bootmisc nfsclient netmount
 }
 
 start() {
