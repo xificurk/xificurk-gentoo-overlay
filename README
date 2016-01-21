@@ -1,7 +1,7 @@
 This is personal gentoo overlay of Petr Morávek [Xificurk].
 It contains various ebuilds missing in official portage tree,
 that I gathered from sources like bugs.gentoo.org, developer's
-overlays, etc.
+overlays, or written myself ;-)
 
 If you want to use this overlay, you need to:
 
@@ -19,3 +19,4 @@ If you want to use this overlay, you need to:
    Or you can sync portage and all your overlays with eix-sync (from eix package), you
    need to configure eix with:
      # echo "*" >> /etc/eix-sync.conf
+
