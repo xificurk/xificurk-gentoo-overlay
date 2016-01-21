@@ -6,7 +6,7 @@
 		<description>Personal overlay: Various ebuilds missing in official portage tree.</description>
 		<homepage>http://github.com/xificurk/xificurk-gentoo-overlay</homepage>
 		<owner type="project">
-			<email>xificurk@gmail.com</email>
+			<email>petr@pada.cz</email>
 			<name>Petr Morávek [Xificurk]</name>
 		</owner>
 		<source type="git">git://github.com/xificurk/xificurk-gentoo-overlay.git</source>
