@@ -11,7 +11,7 @@ KEYWORDS="amd64 ~arm ~ppc ~ppc64 x86 ~amd64-linux ~x86-linux"
 IUSE="debug"
 
 DEPEND="
-	$(add_kdebase_dep baloo)
-	$(add_kdebase_dep kfilemetadata)
+	$(add_kdeframeworks_dep baloo)
+	$(add_kdeframeworks_dep kfilemetadata)
 "
 RDEPEND="${DEPEND}"

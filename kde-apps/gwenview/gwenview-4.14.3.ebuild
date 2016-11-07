@@ -29,7 +29,7 @@ DEPEND="
 	virtual/jpeg:0
 	x11-libs/libX11
 	kipi? ( $(add_kdeapps_dep libkipi) )
-	semantic-desktop? ( $(add_kdebase_dep baloo) )
+	semantic-desktop? ( $(add_kdeframeworks_dep baloo) )
 "
 RDEPEND="${DEPEND}"
 

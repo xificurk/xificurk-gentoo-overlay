@@ -19,9 +19,9 @@ DEPEND="
 	media-libs/phonon[qt4]
 	x11-libs/libXrender
 	semantic-desktop? (
-		$(add_kdebase_dep baloo)
+		$(add_kdeframeworks_dep baloo)
 		$(add_kdeapps_dep baloo-widgets)
-		$(add_kdebase_dep kfilemetadata)
+		$(add_kdeframeworks_dep kfilemetadata)
 	)
 "
 RDEPEND="${DEPEND}

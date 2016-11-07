@@ -2,9 +2,6 @@
 # Distributed under the terms of the GNU General Public License v2
 # $Id$
 
-# DEPRECATED
-# This eclass is deprecated. Superseded by kde5-meta-pkg.eclass.
-
 # @ECLASS: kde4-meta-pkg.eclass
 # @MAINTAINER:
 # kde@gentoo.org

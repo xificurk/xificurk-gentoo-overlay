@@ -14,7 +14,7 @@ KEYWORDS="~amd64 ~arm ~x86"
 IUSE="debug"
 
 DEPEND="
-	$(add_kdebase_dep kwin '' 4.11)
+	$(add_kdeplasma_dep kwin '' 4.11)
 "
 RDEPEND="${DEPEND}"
 
