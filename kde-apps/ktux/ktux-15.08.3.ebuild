@@ -14,6 +14,6 @@ IUSE="debug"
 # libkworkspace - only as a stub to provide KDE4Workspace config
 DEPEND="
 	$(add_kdeplasma_dep kscreensaver '' 4.11)
-	$(add_kdebase_dep libkworkspace '' 4.11)
+	$(add_kdeplasma_dep libkworkspace '' 4.11)
 "
 RDEPEND="${DEPEND}"
