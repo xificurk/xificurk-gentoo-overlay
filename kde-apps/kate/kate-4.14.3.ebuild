@@ -23,11 +23,11 @@ DEPEND="
 	dev-libs/qjson
 	python? (
 		${PYTHON_DEPS}
-		$(add_kdebase_dep pykde4 "${PYTHON_USEDEP}" 4.9.2-r1)
+		$(add_kdeapps_dep pykde4 "${PYTHON_USEDEP}" 4.9.2-r1)
 	)
 "
 RDEPEND="${DEPEND}
-	$(add_kdebase_dep katepart)
+	$(add_kdeapps_dep katepart)
 "
 
 KMEXTRA="

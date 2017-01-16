@@ -15,5 +15,5 @@ KEYWORDS="amd64 ~arm ~ppc ~ppc64 x86 ~amd64-linux ~x86-linux"
 IUSE="debug"
 
 RDEPEND="
-	$(add_kdebase_dep katepart)
+	$(add_kdeapps_dep katepart)
 "

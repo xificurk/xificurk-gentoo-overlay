@@ -15,7 +15,7 @@ IUSE="debug"
 
 DEPEND="
 	$(add_kdeframeworks_dep kactivities '' 4.13)
-	$(add_kdebase_dep kdelibs 'crypt')
+	$(add_kdeframeworks_dep kdelibs 'crypt')
 "
 RDEPEND="${DEPEND}"
 

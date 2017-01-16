@@ -28,6 +28,6 @@ RDEPEND="
 		$(add_kdeapps_dep kdesdk-meta)
 		$(add_kdeapps_dep kdewebdev-meta)
 	)
-	!minimal? ( $(add_kdebase_dep kdeplasma-addons) )
+	!minimal? ( $(add_kdeplasma_dep kdeplasma-addons) )
 "
 REQUIRED_USE="minimal? ( !kdepim )"
