@@ -14,7 +14,7 @@ KEYWORDS="amd64 ~arm ~ppc ~ppc64 x86 ~amd64-linux ~x86-linux"
 IUSE="debug semantic-desktop thumbnail"
 
 DEPEND="
-	$(add_kdebase_dep kactivities '' 4.13)
+	$(add_kdeframeworks_dep kactivities '' 4.13)
 	$(add_kdeapps_dep libkonq)
 	media-libs/phonon[qt4]
 	x11-libs/libXrender
