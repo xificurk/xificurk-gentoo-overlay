@@ -22,7 +22,7 @@ DEPEND="
 	>=dev-qt/qtsql-4.5.0:4[sqlite]
 "
 RDEPEND="${DEPEND}
-	$(add_kdebase_dep krosspython "${PYTHON_USEDEP}")
+	$(add_kdeapps_dep krosspython "${PYTHON_USEDEP}")
 	$(add_kdeapps_dep pykde4 "${PYTHON_USEDEP}")
 "
 

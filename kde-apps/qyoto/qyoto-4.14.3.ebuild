@@ -14,7 +14,7 @@ HOMEPAGE="https://techbase.kde.org/Development/Languages/Qyoto"
 
 DEPEND="
 	dev-lang/mono
-	$(add_kdebase_dep smokeqt 'opengl,phonon?,qscintilla?,webkit?')
+	$(add_kdeapps_dep smokeqt 'opengl,phonon?,qscintilla?,webkit?')
 "
 RDEPEND="${DEPEND}"
 

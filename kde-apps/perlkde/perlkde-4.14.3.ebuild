@@ -12,8 +12,8 @@ IUSE="akonadi attica debug kate okular test"
 
 RDEPEND="
 	>=dev-lang/perl-5.10.1:=
-	$(add_kdebase_dep perlqt)
-	$(add_kdebase_dep smokekde 'akonadi?,attica?,kate?,okular?')
+	$(add_kdeapps_dep perlqt)
+	$(add_kdeapps_dep smokekde 'akonadi?,attica?,kate?,okular?')
 "
 DEPEND="${RDEPEND}
 	test? ( dev-perl/List-MoreUtils )

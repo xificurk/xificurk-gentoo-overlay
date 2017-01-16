@@ -319,42 +319,6 @@ add_kdeapps_dep() {
 	echo " >=kde-apps/${1}-${ver}:4[aqua=${2:+,${2}}]"
 }
 
-# @FUNCTION: add_kdebase_dep
-# @DESCRIPTION:
-# Create proper dependency for kde-base/ dependencies.
-# This takes 1 to 3 arguments. The first being the package name, the optional
-# second is additional USE flags to append, and the optional third is the
-# version to use instead of the automatic version (use sparingly).
-# The output of this should be added directly to DEPEND/RDEPEND, and may be
-# wrapped in a USE conditional (but not an || conditional without an extra set
-# of parentheses).
-add_kdebase_dep() {
-	debug-print-function ${FUNCNAME} "$@"
-
-	local ver
-
-	if [[ -n ${3} ]]; then
-		ver=${3}
-	elif [[ -n ${KDE_OVERRIDE_MINIMAL} ]]; then
-		ver=${KDE_OVERRIDE_MINIMAL}
-	elif [[ ${KDEBASE} != kde-base ]]; then
-		ver=${KDE_MINIMAL}
-	# if building live master or kde-apps, use the final SC version
-	# since there are no further general releases.
-	elif [[ ${CATEGORY} == kde-apps || ${PV} == 9999 ]]; then
-		ver=4.14.3
-	# if building a live version branch (eg. 4.11.49.9999) use the major version
-	elif [[ ${PV} == *.9999 ]]; then
-		ver=$(get_kde_version)
-	else
-		ver=${PV}
-	fi
-
-	[[ -z ${1} ]] && die "Missing parameter"
-
-	echo " >=kde-base/${1}-${ver}:4[aqua=${2:+,${2}}]"
-}
-
 # @FUNCTION: add_kdeframeworks_dep
 # @DESCRIPTION:
 # Create proper dependency for kde-frameworks/ dependencies.

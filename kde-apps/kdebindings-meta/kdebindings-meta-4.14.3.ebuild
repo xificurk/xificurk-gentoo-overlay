@@ -10,21 +10,16 @@ KEYWORDS="amd64 ~arm ~ppc ~ppc64 x86 ~amd64-linux ~x86-linux"
 IUSE="java perl python ruby"
 
 RDEPEND="
-	$(add_kdebase_dep smokegen)
-	$(add_kdebase_dep smokekde)
-	$(add_kdebase_dep smokeqt)
-	java? ( $(add_kdebase_dep krossjava) )
+	$(add_kdeapps_dep smokegen)
+	$(add_kdeapps_dep smokekde)
+	$(add_kdeapps_dep smokeqt)
+	java? ( $(add_kdeapps_dep krossjava) )
 	perl? (
-		$(add_kdebase_dep perlkde)
-		$(add_kdebase_dep perlqt)
+		$(add_kdeapps_dep perlkde)
+		$(add_kdeapps_dep perlqt)
 	)
 	python? (
-		$(add_kdebase_dep krosspython)
-		$(add_kdebase_dep pykde4)
-	)
-	ruby? (
-		$(add_kdebase_dep korundum)
-		$(add_kdebase_dep krossruby)
-		$(add_kdebase_dep qtruby)
+		$(add_kdeapps_dep krosspython)
+		$(add_kdeapps_dep pykde4)
 	)
 "

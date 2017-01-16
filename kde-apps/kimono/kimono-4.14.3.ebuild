@@ -12,10 +12,10 @@ IUSE="akonadi debug plasma"
 
 DEPEND="
 	dev-lang/mono
-	$(add_kdebase_dep qyoto 'webkit')
-	$(add_kdebase_dep smokeqt)
-	$(add_kdebase_dep smokekde)
-	plasma? ( $(add_kdebase_dep smokeqt 'webkit') )
+	$(add_kdeapps_dep qyoto 'webkit')
+	$(add_kdeapps_dep smokeqt)
+	$(add_kdeapps_dep smokekde)
+	plasma? ( $(add_kdeapps_dep smokeqt 'webkit') )
 "
 RDEPEND="${DEPEND}"
 
