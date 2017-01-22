@@ -337,7 +337,7 @@ add_kdeframeworks_dep() {
 		ver=${3}
 	elif [[ -n ${KDE_OVERRIDE_MINIMAL} ]]; then
 		ver=${KDE_OVERRIDE_MINIMAL}
-	elif [[ ${KDEBASE} != kde-frameworks ]]; then
+	elif [[ ${KDEBASE} != kde-base ]]; then
 		ver=${KDE_MINIMAL}
 	# if building live master or kde-apps, use the final SC version
 	# since there are no further general releases.
@@ -373,7 +373,7 @@ add_kdeplasma_dep() {
 		ver=${3}
 	elif [[ -n ${KDE_OVERRIDE_MINIMAL} ]]; then
 		ver=${KDE_OVERRIDE_MINIMAL}
-	elif [[ ${KDEBASE} != kde-plasma ]]; then
+	elif [[ ${KDEBASE} != kde-base ]]; then
 		ver=${KDE_MINIMAL}
 	# if building live master or kde-apps, use the final SC version
 	# since there are no further general releases.
