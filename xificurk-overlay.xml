@@ -4,12 +4,12 @@
 	<repo quality="experimental" status="unofficial">
 		<name>xificurk</name>
 		<description>Personal overlay: Various ebuilds missing in official portage tree.</description>
-		<homepage>http://github.com/xificurk/xificurk-gentoo-overlay</homepage>
+		<homepage>https://github.com/xificurk/xificurk-gentoo-overlay</homepage>
 		<owner type="project">
 			<email>petr@pada.cz</email>
 			<name>Petr Morávek [Xificurk]</name>
 		</owner>
 		<source type="git">https://github.com/xificurk/xificurk-gentoo-overlay.git</source>
-		<feed>http://github.com/xificurk/xificurk-gentoo-overlay/commits/master.atom</feed>
+		<feed>https://github.com/xificurk/xificurk-gentoo-overlay/commits/master.atom</feed>
 	</repo>
 </repositories>

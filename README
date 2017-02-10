@@ -9,7 +9,7 @@ If you want to use this overlay, you need to:
      # emerge layman
 2) Add my overlay list to /etc/layman/layman.cfg - find the "overlays"
    directive and add URL:
-     http://github.com/xificurk/xificurk-gentoo-overlay/raw/master/xificurk-overlay.xml
+     https://github.com/xificurk/xificurk-gentoo-overlay/raw/master/xificurk-overlay.xml
 3) Fetch the overlay list:
      # layman -L
 4) Add my overlay:
