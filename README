@@ -9,14 +9,9 @@ If you want to use this overlay, you need to:
      # emerge layman
 2) Add my overlay list to /etc/layman/layman.cfg - find the "overlays"
    directive and add URL:
-     https://github.com/xificurk/xificurk-gentoo-overlay/raw/master/xificurk-overlay.xml
+     https://raw.githubusercontent.com/xificurk/xificurk-gentoo-overlay/master/xificurk-overlay.xml
 3) Fetch the overlay list:
      # layman -L
 4) Add my overlay:
      # layman -a xificurk
-5) To sync overlay either use manually:
-     # layman -S
-   Or you can sync portage and all your overlays with eix-sync (from eix package), you
-   need to configure eix with:
-     # echo "*" >> /etc/eix-sync.conf
 
