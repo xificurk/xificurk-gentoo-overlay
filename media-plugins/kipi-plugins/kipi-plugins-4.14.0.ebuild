@@ -74,7 +74,7 @@ DEPEND="${COMMONDEPEND}
 	)
 "
 RDEPEND="${COMMONDEPEND}
-	cdr? ( app-cdr/k3b )
+	cdr? ( kde-apps/k3b )
 	expoblending? ( media-gfx/hugin )
 	imagemagick? ( || ( media-gfx/imagemagick media-gfx/graphicsmagick[imagemagick] ) )
 	panorama? (
