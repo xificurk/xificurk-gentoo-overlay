@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<pkgmetadata>
+<use>
+	<flag name="crash-reporter">Builds a gui tool to submit crash information to the upstream backtracker</flag>
+	<flag name="wallpapers">Install the KDE Plasma wallpapers</flag>
+</use>
+</pkgmetadata>

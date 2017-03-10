@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<pkgmetadata>
+<use>
+	<flag name="elogind">Use <pkg>sys-auth/elogind</pkg> for session tracking.</flag>
+	<flag name="pm-utils">Adds support for suspend/resume the system through <pkg>sys-power/pm-utils</pkg></flag>
+	<flag name="wireless">Enable wireless energy saving actions via <pkg>kde-frameworks/bluez-qt</pkg> and <pkg>kde-frameworks/networkmanager-qt</pkg></flag>
+</use>
+</pkgmetadata>
