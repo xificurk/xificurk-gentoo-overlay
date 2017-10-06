@@ -10,7 +10,7 @@ inherit kde4-meta
 
 DESCRIPTION="KDE Plasma Command Runner"
 HOMEPAGE+=" https://userbase.kde.org/Plasma/Krunner"
-IUSE="debug"
+IUSE="aqua debug"
 KEYWORDS="amd64 ~arm x86 ~amd64-linux ~x86-linux"
 
 DEPEND="
