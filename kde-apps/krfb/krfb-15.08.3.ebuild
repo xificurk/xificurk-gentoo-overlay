@@ -11,7 +11,7 @@ HOMEPAGE="https://www.kde.org/applications/system/krfb/"
 SRC_URI="mirror://kde/Attic/applications/${PV}/src/${P}.tar.xz"
 
 KEYWORDS="amd64 x86"
-IUSE="debug telepathy ktp"
+IUSE="aqua debug telepathy ktp"
 REQUIRED_USE="ktp? ( telepathy )"
 
 DEPEND="
