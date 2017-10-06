@@ -10,7 +10,7 @@ inherit kde4-meta
 DESCRIPTION="PowerDevil is an utility for KDE4 for Laptop Powermanagement"
 HOMEPAGE="https://solid.kde.org"
 KEYWORDS="amd64 ~arm x86 ~amd64-linux ~x86-linux"
-IUSE="debug +pm-utils"
+IUSE="aqua debug +pm-utils"
 
 DEPEND="
 	kde-frameworks/kactivities:4
