@@ -17,12 +17,10 @@ DEPEND="
 	>=net-libs/libvncserver-0.9.9
 	sys-libs/zlib
 	virtual/jpeg:0
-	!aqua? (
-		x11-libs/libX11
-		x11-libs/libXdamage
-		x11-libs/libXext
-		x11-libs/libXtst
-	)
+	x11-libs/libX11
+	x11-libs/libXdamage
+	x11-libs/libXext
+	x11-libs/libXtst
 	telepathy? ( >=net-libs/telepathy-qt-0.9 )
 "
 RDEPEND="${DEPEND}"
