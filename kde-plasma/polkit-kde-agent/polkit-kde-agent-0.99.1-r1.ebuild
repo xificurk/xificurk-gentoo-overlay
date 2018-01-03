@@ -25,7 +25,6 @@ IUSE="debug minimal"
 
 RDEPEND="
 	>=sys-auth/polkit-qt-0.103.0[qt4(+)]
-	!sys-auth/polkit-kde
 "
 DEPEND="${RDEPEND}
 	sys-devel/gettext

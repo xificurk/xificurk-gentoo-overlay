@@ -26,7 +26,7 @@ REQUIRED_USE="${PYTHON_REQUIRED_USE}"
 DEPEND="
 	${PYTHON_DEPS}
 	>=net-firewall/ufw-0.31
-	sys-auth/polkit-kde-agent
+	kde-plasma/polkit-kde-agent:4
 "
 RDEPEND="${DEPEND}
 	$(add_kdeapps_dep kcmshell)
