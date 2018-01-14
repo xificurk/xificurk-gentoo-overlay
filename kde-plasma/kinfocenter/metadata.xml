@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
-<pkgmetadata>
-<use>
-	<flag name="egl">Retrieve information about OpenGL via EGL</flag>
-	<flag name="gles2">Show OpenGL ES information in kinfocenter</flag>
-	<flag name="pci">Show advanced PCI information</flag>
-</use>
-</pkgmetadata>
