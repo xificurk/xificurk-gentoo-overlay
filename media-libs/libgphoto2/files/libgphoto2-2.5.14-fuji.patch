@@ -1,0 +1,25 @@
+From 472a9461b457b4d08ecf10a93bb7f1efdc2124c0 Mon Sep 17 00:00:00 2001
+From: Marcus Meissner <marcus@jet.franken.de>
+Date: Mon, 19 Jun 2017 20:13:14 +0200
+Subject: [PATCH] ignore missing 0xd207 property on Fuji XT-2 without firmware
+ update
+
+---
+ camlibs/ptp2/config.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/camlibs/ptp2/config.c b/camlibs/ptp2/config.c
+index 5a2a637f1..858f6bdbe 100644
+--- a/camlibs/ptp2/config.c
++++ b/camlibs/ptp2/config.c
+@@ -482,6 +482,10 @@ camera_prepare_capture (Camera *camera, GPContext *context)
+ 		{
+ 			PTPPropertyValue propval;
+ 
++			/* without the firmware update ... not an error... */
++			if (!have_prop (camera, PTP_VENDOR_FUJI, 0xd207))
++				return GP_OK;
++
+ 			propval.u16 = 0x0002;
+ 			C_PTP (ptp_setdevicepropvalue (params, 0xd207, &propval, PTP_DTC_UINT16));
+ 			return GP_OK;
