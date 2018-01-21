@@ -1,0 +1,94 @@
+From 32c9842cb556f700b2164bb27610a03fc7c9c088 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Petr=20Mor=C3=A1vek=20=5BXificurk=5D?= <petr@pada.cz>
+Date: Sun, 19 May 2013 10:06:18 +0200
+Subject: [PATCH] Method for checking if IPTC tag is repeatable.
+
+---
+ gexiv2/gexiv2-metadata-iptc.cpp  | 15 +++++++++++++++
+ gexiv2/gexiv2-metadata-private.h |  1 +
+ gexiv2/gexiv2-metadata.cpp       | 11 +++++++++++
+ gexiv2/gexiv2-metadata.h         |  8 ++++++++
+ 4 files changed, 35 insertions(+)
+
+diff --git a/gexiv2/gexiv2-metadata-iptc.cpp b/gexiv2/gexiv2-metadata-iptc.cpp
+index 2371708..833f958 100644
+--- a/gexiv2/gexiv2-metadata-iptc.cpp
++++ b/gexiv2/gexiv2-metadata-iptc.cpp
+@@ -277,6 +277,21 @@ const gchar* gexiv2_metadata_get_iptc_tag_type (const gchar* tag) {
+     return NULL;
+ }
+ 
++
++gboolean gexiv2_metadata_is_iptc_tag_repeatable (const gchar* tag) {
++    g_return_val_if_fail(tag != NULL, NULL);
++
++    try {
++        Exiv2::IptcKey key(tag);
++        return Exiv2::IptcDataSets::dataSetRepeatable(key.tag(), key.record());
++    } catch (Exiv2::Error &e) {
++        LOG_ERROR(e);
++    }
++
++    return FALSE;
++}
++
++
+ GBytes* gexiv2_metadata_get_iptc_tag_raw (GExiv2Metadata *self, const gchar* tag) {
+     g_return_val_if_fail(GEXIV2_IS_METADATA (self), NULL);
+     g_return_val_if_fail(tag != NULL, NULL);
+diff --git a/gexiv2/gexiv2-metadata-private.h b/gexiv2/gexiv2-metadata-private.h
+index 16d38ef..e534c24 100644
+--- a/gexiv2/gexiv2-metadata-private.h
++++ b/gexiv2/gexiv2-metadata-private.h
+@@ -83,6 +83,7 @@ gboolean		gexiv2_metadata_set_iptc_tag_multiple	(GExiv2Metadata *self, const gch
+ const gchar*	gexiv2_metadata_get_iptc_tag_label	(const gchar* tag);
+ const gchar*	gexiv2_metadata_get_iptc_tag_description	(const gchar* tag);
+ const gchar*	gexiv2_metadata_get_iptc_tag_type	(const gchar* tag);
++gboolean		gexiv2_metadata_is_iptc_tag_repeatable	(const gchar* tag);
+ 
+ GBytes*			gexiv2_metadata_get_iptc_tag_raw	(GExiv2Metadata *self, const gchar* tag);
+ 
+diff --git a/gexiv2/gexiv2-metadata.cpp b/gexiv2/gexiv2-metadata.cpp
+index d754d90..ff94796 100644
+--- a/gexiv2/gexiv2-metadata.cpp
++++ b/gexiv2/gexiv2-metadata.cpp
+@@ -886,6 +886,17 @@ const gchar* gexiv2_metadata_get_tag_type (const gchar *tag) {
+     return NULL;
+ }
+ 
++
++gboolean gexiv2_metadata_is_tag_repeatable (const gchar *tag) {
++    g_return_val_if_fail(tag != NULL, NULL);
++
++    if (gexiv2_metadata_is_iptc_tag(tag))
++        return gexiv2_metadata_is_iptc_tag_repeatable(tag);
++
++    return FALSE;
++}
++
++
+ GBytes* gexiv2_metadata_get_tag_raw(GExiv2Metadata *self, const gchar* tag) {
+     g_return_val_if_fail(GEXIV2_IS_METADATA (self), NULL);
+     g_return_val_if_fail(tag != NULL, NULL);
+diff --git a/gexiv2/gexiv2-metadata.h b/gexiv2/gexiv2-metadata.h
+index 0ff3d4b..251c9ab 100644
+--- a/gexiv2/gexiv2-metadata.h
++++ b/gexiv2/gexiv2-metadata.h
+@@ -296,6 +296,14 @@ const gchar*	gexiv2_metadata_get_tag_description	(const gchar *tag);
+ const gchar*	gexiv2_metadata_get_tag_type	(const gchar *tag);
+ 
+ /**
++ * gexiv2_metadata_is_tag_repeatable:
++ * @tag: Name of the tag who's repeatability you want
++ *
++ * Returns: (transfer none) (allow-none): Is tag repeatable
++ */
++gboolean	gexiv2_metadata_is_tag_repeatable	(const gchar *tag);
++
++/**
+  * gexiv2_metadata_get_supports_exif:
+  *
+  * Returns: TRUE if the loaded image type supports writing EXIF metadata.
+-- 
+2.13.6
+

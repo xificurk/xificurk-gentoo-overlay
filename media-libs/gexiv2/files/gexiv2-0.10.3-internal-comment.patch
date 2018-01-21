@@ -1,0 +1,94 @@
+From b86d84a76dc99acf1475b1735ffbd7e3ac212de2 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Petr=20Mor=C3=A1vek=20=5BXificurk=5D?= <petr@pada.cz>
+Date: Sun, 19 May 2013 09:32:03 +0200
+Subject: [PATCH] Add methods for manipulating with internal comment.
+
+---
+ gexiv2/gexiv2-metadata.cpp | 36 +++++++++++++++++++++++++++---------
+ gexiv2/gexiv2-metadata.h   |  9 +++++++++
+ 2 files changed, 36 insertions(+), 9 deletions(-)
+
+diff --git a/gexiv2/gexiv2-metadata.cpp b/gexiv2/gexiv2-metadata.cpp
+index 07d76e9..d754d90 100644
+--- a/gexiv2/gexiv2-metadata.cpp
++++ b/gexiv2/gexiv2-metadata.cpp
+@@ -33,7 +33,6 @@ G_BEGIN_DECLS
+ G_DEFINE_TYPE (GExiv2Metadata, gexiv2_metadata, G_TYPE_OBJECT);
+ 
+ static void gexiv2_metadata_finalize (GObject *object);
+-static void gexiv2_metadata_set_comment_internal (GExiv2Metadata *self, const gchar *new_comment);
+ 
+ static gboolean gexiv2_metadata_open_internal (GExiv2Metadata *self, GError **error);
+ static gboolean gexiv2_metadata_save_internal (GExiv2Metadata *self, Exiv2::Image::AutoPtr image, GError **error);
+@@ -102,14 +101,6 @@ void gexiv2_metadata_free (GExiv2Metadata *self) {
+     g_object_unref(self);
+ }
+ 
+-static void gexiv2_metadata_set_comment_internal (GExiv2Metadata* self, const gchar* new_comment) {
+-    g_return_if_fail (GEXIV2_IS_METADATA (self));
+-    
+-    g_free (self->priv->comment);
+-    
+-    self->priv->comment = g_strdup (new_comment);
+-}
+-
+ static void gexiv2_metadata_init_internal (GExiv2Metadata *self) {
+     GExiv2MetadataPrivate* priv = self->priv;
+     
+@@ -606,6 +597,33 @@ void gexiv2_metadata_clear_comment (GExiv2Metadata *self) {
+     g_return_if_fail(GEXIV2_IS_METADATA (self));
+     g_return_if_fail(self->priv->image.get() != NULL);
+ 
++    gexiv2_metadata_clear_comment_internal (self);
++}
++
++gchar* gexiv2_metadata_get_comment_internal (GExiv2Metadata *self) {
++    g_return_val_if_fail(GEXIV2_IS_METADATA (self), NULL);
++    g_return_val_if_fail(self->priv->image.get() != NULL, NULL);
++    
++    gchar* str = self->priv->comment;
++    if (str != NULL && *str != '\0')
++        return g_strdup(str);
++
++    return NULL;
++}
++
++void gexiv2_metadata_set_comment_internal (GExiv2Metadata *self, const gchar* comment) {
++    g_return_if_fail(GEXIV2_IS_METADATA (self));
++    g_return_if_fail(self->priv->image.get() != NULL);
++    
++    g_free (self->priv->comment);
++    self->priv->comment = g_strdup ((comment != NULL) ? comment : "");
++
++}
++
++void gexiv2_metadata_clear_comment_internal (GExiv2Metadata *self) {
++    g_return_if_fail(GEXIV2_IS_METADATA (self));
++    g_return_if_fail(self->priv->image.get() != NULL);
++
+     /* don't delete the comment field, merely empty it */
+     gexiv2_metadata_set_comment_internal (self, "");
+ }
+diff --git a/gexiv2/gexiv2-metadata.h b/gexiv2/gexiv2-metadata.h
+index 3a28a2b..0ff3d4b 100644
+--- a/gexiv2/gexiv2-metadata.h
++++ b/gexiv2/gexiv2-metadata.h
+@@ -340,6 +340,15 @@ gint			gexiv2_metadata_get_pixel_width		(GExiv2Metadata *self);
+ gint			gexiv2_metadata_get_pixel_height	(GExiv2Metadata *self);
+ 
+ /**
++ * gexiv2_metadata_get_comment_internal:
++ *
++ * Returns: (transfer full) (allow-none): The photo's comment
++ */
++gchar*			gexiv2_metadata_get_comment_internal	(GExiv2Metadata *self);
++void			gexiv2_metadata_set_comment_internal	(GExiv2Metadata *self, const gchar* comment);
++void			gexiv2_metadata_clear_comment_internal	(GExiv2Metadata *self);
++
++/**
+  * gexiv2_metadata_get_tag_string:
+  * @tag: Exiv2 tag name
+  *
+-- 
+2.13.6
+
