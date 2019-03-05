@@ -1,0 +1,321 @@
+From 37c104a928e80d2a2eba7c56a978b08c1937d3bf Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Petr=20Mor=C3=A1vek=20=5BXificurk=5D?= <petr@pada.cz>
+Date: Sun, 19 May 2013 12:46:50 +0200
+Subject: [PATCH] Take into account tags that are present, but have zero
+ length.
+
+---
+ gexiv2/gexiv2-metadata-exif.cpp | 28 ++++++--------------------
+ gexiv2/gexiv2-metadata-iptc.cpp | 32 +++++++-----------------------
+ gexiv2/gexiv2-metadata-xmp.cpp  | 35 +++++++--------------------------
+ 3 files changed, 20 insertions(+), 75 deletions(-)
+
+diff --git a/gexiv2/gexiv2-metadata-exif.cpp b/gexiv2/gexiv2-metadata-exif.cpp
+index f931b95..4a36654 100644
+--- a/gexiv2/gexiv2-metadata-exif.cpp
++++ b/gexiv2/gexiv2-metadata-exif.cpp
+@@ -31,7 +31,7 @@ gboolean gexiv2_metadata_has_exif_tag(GExiv2Metadata *self, const gchar* tag) {
+     
+     Exiv2::ExifData &exif_data = self->priv->image->exifData();
+     for (Exiv2::ExifData::iterator it = exif_data.begin(); it != exif_data.end(); ++it) {
+-        if (it->count() > 0 && g_ascii_strcasecmp(tag, it->key().c_str()) == 0)
++        if (g_ascii_strcasecmp(tag, it->key().c_str()) == 0)
+             return TRUE;
+     }
+     
+@@ -49,7 +49,7 @@ gboolean gexiv2_metadata_clear_exif_tag(GExiv2Metadata *self, const gchar* tag)
+     
+     Exiv2::ExifData::iterator it = exif_data.begin();
+     while (it != exif_data.end()) {
+-        if (it->count() > 0 && g_ascii_strcasecmp(tag, it->key().c_str()) == 0) {
++        if (g_ascii_strcasecmp(tag, it->key().c_str()) == 0) {
+             it = exif_data.erase(it);
+             erased = TRUE;
+         } else {
+@@ -81,10 +81,8 @@ gchar** gexiv2_metadata_get_exif_tags (GExiv2Metadata *self) {
+     gint count = 0;
+     
+     for (Exiv2::ExifData::iterator it = exif_data.begin(); it != exif_data.end(); ++it) {
+-        if (it->count() > 0) {
+             list = g_slist_prepend (list, g_strdup (it->key ().c_str ()));
+             count++;
+-        }
+     }
+     
+     data = g_new (gchar*, count + 1);
+@@ -106,11 +104,9 @@ gchar* gexiv2_metadata_get_exif_tag_string (GExiv2Metadata *self, const gchar* t
+     
+     try {
+         Exiv2::ExifData::iterator it = exif_data.findKey(Exiv2::ExifKey(tag));
+-        while (it != exif_data.end() && it->count() == 0)
+-            it++;
+-        
+-        if (it != exif_data.end())
++        if (it != exif_data.end()) {
+             return g_strdup (it->toString ().c_str ());
++        }
+     } catch (Exiv2::Error& e) {
+         LOG_ERROR(e);
+     }
+@@ -127,9 +123,6 @@ gchar* gexiv2_metadata_get_exif_tag_interpreted_string (GExiv2Metadata *self, co
+     
+     try {
+         Exiv2::ExifData::iterator it = exif_data.findKey(Exiv2::ExifKey(tag));
+-        while (it != exif_data.end() && it->count() == 0)
+-            it++;
+-        
+         if (it != exif_data.end()) {
+             std::ostringstream os;
+             it->write (os, &exif_data);
+@@ -169,11 +162,9 @@ glong gexiv2_metadata_get_exif_tag_long (GExiv2Metadata *self, const gchar* tag)
+     
+     try {
+         Exiv2::ExifData::iterator it = exif_data.findKey(Exiv2::ExifKey(tag));
+-        while (it != exif_data.end() && it->count() == 0)
+-            it++;
+-        
+-        if (it != exif_data.end())
++        if (it != exif_data.end()) {
+             return it->toLong ();
++        }
+     } catch (Exiv2::Error& e) {
+         LOG_ERROR(e);
+     }
+@@ -220,14 +211,10 @@ gboolean gexiv2_metadata_get_exif_tag_rational (GExiv2Metadata *self, const gcha
+     
+     try {
+         Exiv2::ExifData::iterator it = exif_data.findKey(Exiv2::ExifKey(tag));
+-        while (it != exif_data.end() && it->count() == 0)
+-            it++;
+-        
+         if (it != exif_data.end()) {
+             Exiv2::Rational r = it->toRational();
+             *nom = r.first;
+             *den = r.second;
+-            
+             return TRUE;
+         }
+     } catch (Exiv2::Error& e) {
+@@ -341,9 +328,6 @@ GBytes* gexiv2_metadata_get_exif_tag_raw (GExiv2Metadata *self, const gchar* tag
+ 
+     try {
+         Exiv2::ExifData::iterator it = exif_data.findKey(Exiv2::ExifKey(tag));
+-        while (it != exif_data.end() && it->count() == 0)
+-            it++;
+-
+         if (it != exif_data.end()) {
+             long size = it->size();
+             if( size > 0 ) {
+diff --git a/gexiv2/gexiv2-metadata-iptc.cpp b/gexiv2/gexiv2-metadata-iptc.cpp
+index a212de6..5572025 100644
+--- a/gexiv2/gexiv2-metadata-iptc.cpp
++++ b/gexiv2/gexiv2-metadata-iptc.cpp
+@@ -31,7 +31,7 @@ gboolean gexiv2_metadata_has_iptc_tag(GExiv2Metadata *self, const gchar* tag) {
+     Exiv2::IptcData &iptc_data = self->priv->image->iptcData();
+     
+     for (Exiv2::IptcData::iterator it = iptc_data.begin(); it != iptc_data.end(); ++it) {
+-        if (it->count() > 0 && g_ascii_strcasecmp(tag, it->key().c_str()) == 0)
++        if (g_ascii_strcasecmp(tag, it->key().c_str()) == 0)
+             return TRUE;
+     }
+     
+@@ -49,7 +49,7 @@ gboolean gexiv2_metadata_clear_iptc_tag(GExiv2Metadata *self, const gchar* tag)
+     
+     Exiv2::IptcData::iterator it = iptc_data.begin();
+     while (it != iptc_data.end()) {
+-        if (it->count() > 0 && g_ascii_strcasecmp(tag, it->key().c_str()) == 0) {
++        if (g_ascii_strcasecmp(tag, it->key().c_str()) == 0) {
+             it = iptc_data.erase(it);
+             erased = TRUE;
+         } else {
+@@ -81,10 +81,8 @@ gchar** gexiv2_metadata_get_iptc_tags (GExiv2Metadata *self) {
+     gint count = 0;
+     
+     for (Exiv2::IptcData::iterator it = iptc_data.begin(); it != iptc_data.end(); ++it) {
+-        if (it->count() > 0) {
+             list = g_slist_prepend (list, g_strdup (it->key ().c_str ()));
+             count++;
+-        }
+     }
+     
+     data = g_new (gchar*, count + 1);
+@@ -106,11 +104,9 @@ gchar* gexiv2_metadata_get_iptc_tag_string (GExiv2Metadata *self, const gchar* t
+     
+     try {
+         Exiv2::IptcData::iterator it = iptc_data.findKey(Exiv2::IptcKey(tag));
+-        while (it != iptc_data.end() && it->count() == 0)
+-            it++;
+-        
+-        if (it != iptc_data.end())
++        if (it != iptc_data.end()) {
+             return g_strdup (it->toString ().c_str ());
++        }
+     } catch (Exiv2::Error& e) {
+         LOG_ERROR(e);
+     }
+@@ -127,13 +123,9 @@ gchar* gexiv2_metadata_get_iptc_tag_interpreted_string (GExiv2Metadata *self, co
+     
+     try {
+         Exiv2::IptcData::iterator it = iptc_data.findKey(Exiv2::IptcKey(tag));
+-        while (it != iptc_data.end() && it->count() == 0)
+-            it++;
+-        
+         if (it != iptc_data.end()) {
+             std::ostringstream os;
+             it->write (os);
+-            
+             return g_strdup (os.str ().c_str ());
+         }
+     } catch (Exiv2::Error& e) {
+@@ -174,9 +166,8 @@ gchar** gexiv2_metadata_get_iptc_tag_multiple (GExiv2Metadata *self, const gchar
+     gint count = 0;
+     
+     try {
+-        Exiv2::IptcKey key (tag);
+         for (Exiv2::IptcData::iterator it = iptc_data.begin(); it != iptc_data.end(); ++it) {
+-            if (it->count() > 0 && key.key () == it->key ()) {
++            if (g_ascii_strcasecmp(tag, it->key().c_str()) == 0) {
+                 list = g_slist_prepend (list, g_strdup (it->toString ().c_str ()));
+                 count++;
+             }
+@@ -210,16 +201,10 @@ gboolean gexiv2_metadata_set_iptc_tag_multiple (GExiv2Metadata *self, const gcha
+     
+     try {
+         /* first clear all existing ... */
+-        Exiv2::IptcKey iptc_key(tag);
+-        Exiv2::IptcData::iterator iptc_it = iptc_data.begin();
+-        while (iptc_it != iptc_data.end()) {
+-            if (iptc_it->count() > 0 && iptc_key.key () == iptc_it->key ())
+-                iptc_it = iptc_data.erase (iptc_it);
+-            else
+-                ++iptc_it;
+-        }
++        gexiv2_metadata_clear_iptc_tag(self, tag);
+         
+         /* ... and then set the others */
++        Exiv2::IptcKey iptc_key(tag);
+         Exiv2::Value::AutoPtr iptc_value = Exiv2::Value::create(Exiv2::string);
+             
+         const gchar **it = values;
+@@ -301,9 +286,6 @@ GBytes* gexiv2_metadata_get_iptc_tag_raw (GExiv2Metadata *self, const gchar* tag
+ 
+     try {
+         Exiv2::IptcData::iterator it = iptc_data.findKey(Exiv2::IptcKey(tag));
+-        while (it != iptc_data.end() && it->count() == 0)
+-            it++;
+-
+         if (it != iptc_data.end()) {
+             long size = it->size();
+             if( size > 0 ) {
+diff --git a/gexiv2/gexiv2-metadata-xmp.cpp b/gexiv2/gexiv2-metadata-xmp.cpp
+index 6f60cd0..c7eac41 100644
+--- a/gexiv2/gexiv2-metadata-xmp.cpp
++++ b/gexiv2/gexiv2-metadata-xmp.cpp
+@@ -67,7 +67,7 @@ gboolean gexiv2_metadata_has_xmp_tag(GExiv2Metadata *self, const gchar* tag) {
+     Exiv2::XmpData &xmp_data = self->priv->image->xmpData();
+     
+     for (Exiv2::XmpData::iterator it = xmp_data.begin(); it != xmp_data.end(); ++it) {
+-        if (it->count() > 0 && g_ascii_strcasecmp(tag, it->key().c_str()) == 0)
++        if (g_ascii_strcasecmp(tag, it->key().c_str()) == 0)
+             return TRUE;
+     }
+     
+@@ -85,7 +85,7 @@ gboolean gexiv2_metadata_clear_xmp_tag(GExiv2Metadata *self, const gchar* tag) {
+     
+     Exiv2::XmpData::iterator it = xmp_data.begin();
+     while (it != xmp_data.end()) {
+-        if (it->count() > 0 && g_ascii_strcasecmp(tag, it->key().c_str()) == 0) {
++        if (g_ascii_strcasecmp(tag, it->key().c_str()) == 0) {
+             it = xmp_data.erase(it);
+             erased = TRUE;
+         } else {
+@@ -110,10 +110,8 @@ gchar** gexiv2_metadata_get_xmp_tags (GExiv2Metadata *self) {
+     gint count = 0;
+     
+     for (Exiv2::XmpData::iterator it = xmp_data.begin(); it != xmp_data.end(); ++it) {
+-        if (it->count() > 0) {
+             list = g_slist_prepend (list, g_strdup (it->key ().c_str ()));
+             count++;
+-        }
+     }
+     
+     data = g_new (gchar*, count + 1);
+@@ -135,11 +133,9 @@ gchar* gexiv2_metadata_get_xmp_tag_string (GExiv2Metadata *self, const gchar* ta
+     
+     try {
+         Exiv2::XmpData::iterator it = xmp_data.findKey(Exiv2::XmpKey(tag));
+-        while (it != xmp_data.end() && it->count() == 0)
+-            it++;
+-        
+-        if (it != xmp_data.end())
++        if  (it != xmp_data.end()) {
+             return g_strdup (it->toString ().c_str ());
++        }
+     } catch (Exiv2::Error& e) {
+         LOG_ERROR(e);
+     }
+@@ -156,13 +152,9 @@ gchar* gexiv2_metadata_get_xmp_tag_interpreted_string (GExiv2Metadata *self, con
+     
+     try {
+         Exiv2::XmpData::iterator it = xmp_data.findKey(Exiv2::XmpKey(tag));
+-        while (it != xmp_data.end() && it->count() == 0)
+-            it++;
+-        
+         if (it != xmp_data.end()) {
+             std::ostringstream os;
+             it->write (os);
+-            
+             return g_strdup (os.str ().c_str ());
+         }
+     } catch (Exiv2::Error& e) {
+@@ -241,11 +233,9 @@ glong gexiv2_metadata_get_xmp_tag_long (GExiv2Metadata *self, const gchar* tag)
+     
+     try {
+         Exiv2::XmpData::iterator it = xmp_data.findKey(Exiv2::XmpKey(tag));
+-        while (it != xmp_data.end() && it->count() == 0)
+-            it++;
+-        
+-        if (it != xmp_data.end())
++        if (it != xmp_data.end()) {
+             return it->toLong ();
++        }
+     } catch (Exiv2::Error& e) {
+         LOG_ERROR(e);
+     }
+@@ -280,9 +270,6 @@ gchar** gexiv2_metadata_get_xmp_tag_multiple (GExiv2Metadata *self, const gchar*
+         Exiv2::XmpKey key = Exiv2::XmpKey(tag);
+         Exiv2::XmpData::iterator it = xmp_data.findKey(key);
+ 
+-        while (it != xmp_data.end() && it->count() == 0 && it->key() != key.key())
+-            it++;
+-        
+         if (it != xmp_data.end()) {
+             int size = it->count ();
+             gchar **array = g_new (gchar*, size + 1);
+@@ -314,12 +301,7 @@ gboolean gexiv2_metadata_set_xmp_tag_multiple (GExiv2Metadata *self, const gchar
+     
+     try {
+         /* first clear existing tag */
+-        Exiv2::XmpData::iterator it = xmp_data.findKey(Exiv2::XmpKey(tag));
+-        while (it != xmp_data.end() && it->count() == 0)
+-            it++;
+-        
+-        if (it != xmp_data.end())
+-            xmp_data.erase (it);
++        gexiv2_metadata_clear_xmp_tag(self, tag);
+         
+         /* ... and then set the others */
+         const gchar **val_it = values;
+@@ -381,9 +363,6 @@ GBytes* gexiv2_metadata_get_xmp_tag_raw (GExiv2Metadata *self, const gchar* tag)
+ 
+     try {
+         Exiv2::XmpData::iterator it = xmp_data.findKey(Exiv2::XmpKey(tag));
+-        while (it != xmp_data.end() && it->count() == 0)
+-            it++;
+-
+         if (it != xmp_data.end()) {
+             long size = it->size();
+             if( size > 0 ) {
+-- 
+2.19.2
+
