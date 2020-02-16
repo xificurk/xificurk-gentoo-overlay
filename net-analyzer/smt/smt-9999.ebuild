@@ -4,13 +4,13 @@
 
 EAPI="5"
 
-EGIT_REPO_URI="git://github.com/xificurk/smt.git"
-PYTHON_COMPAT=( python3_1 python3_2 python3_3 python3_4 python3_5 python3_6 )
+EGIT_REPO_URI="https://github.com/xificurk/smt.git"
+PYTHON_COMPAT=( python3_1 python3_2 python3_3 python3_4 python3_5 python3_6 python3_7 )
 
-inherit distutils-r1 git-2 user
+inherit distutils-r1 git-r3 user
 
 DESCRIPTION="Simple monitoring tool for various sensors."
-HOMEPAGE="http://github.com/xificurk/smt"
+HOMEPAGE="https://github.com/xificurk/smt"
 
 LICENSE="LGPL-3"
 SLOT="0"

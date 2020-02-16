@@ -4,12 +4,12 @@
 
 EAPI="5"
 
-EGIT_REPO_URI="git://github.com/vwal/nfs_automount.git"
+EGIT_REPO_URI="https://github.com/vwal/nfs_automount.git"
 
-inherit git-2
+inherit git-r3
 
 DESCRIPTION="Keeps NFS mounts active. Also enables cross-mounts between servers."
-HOMEPAGE="http://github.com/vwal/nfs_automount"
+HOMEPAGE="https://github.com/vwal/nfs_automount"
 
 LICENSE="MIT"
 SLOT="0"
