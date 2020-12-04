@@ -5,7 +5,7 @@
 EAPI="5"
 
 EGIT_REPO_URI="https://github.com/xificurk/smt.git"
-PYTHON_COMPAT=( python3_1 python3_2 python3_3 python3_4 python3_5 python3_6 python3_7 )
+PYTHON_COMPAT=( python3_1 python3_2 python3_3 python3_4 python3_5 python3_6 python3_7 python3_8 python3_9 )
 
 inherit distutils-r1 git-r3 user
 
