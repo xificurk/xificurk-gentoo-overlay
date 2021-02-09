@@ -1,4 +1,4 @@
-From 37c104a928e80d2a2eba7c56a978b08c1937d3bf Mon Sep 17 00:00:00 2001
+From 1516df6050bc2001cac67246839616181c9655dd Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Petr=20Mor=C3=A1vek=20=5BXificurk=5D?= <petr@pada.cz>
 Date: Sun, 19 May 2013 12:46:50 +0200
 Subject: [PATCH] Take into account tags that are present, but have zero
@@ -107,7 +107,7 @@ index f931b95..4a36654 100644
              long size = it->size();
              if( size > 0 ) {
 diff --git a/gexiv2/gexiv2-metadata-iptc.cpp b/gexiv2/gexiv2-metadata-iptc.cpp
-index a212de6..5572025 100644
+index ed6d64b..01a0f2a 100644
 --- a/gexiv2/gexiv2-metadata-iptc.cpp
 +++ b/gexiv2/gexiv2-metadata-iptc.cpp
 @@ -31,7 +31,7 @@ gboolean gexiv2_metadata_has_iptc_tag(GExiv2Metadata *self, const gchar* tag) {
@@ -194,7 +194,7 @@ index a212de6..5572025 100644
          
          /* ... and then set the others */
 +        Exiv2::IptcKey iptc_key(tag);
-         Exiv2::Value::AutoPtr iptc_value = Exiv2::Value::create(Exiv2::string);
+         auto iptc_value = Exiv2::Value::create(Exiv2::string);
              
          const gchar **it = values;
 @@ -301,9 +286,6 @@ GBytes* gexiv2_metadata_get_iptc_tag_raw (GExiv2Metadata *self, const gchar* tag
@@ -208,7 +208,7 @@ index a212de6..5572025 100644
              long size = it->size();
              if( size > 0 ) {
 diff --git a/gexiv2/gexiv2-metadata-xmp.cpp b/gexiv2/gexiv2-metadata-xmp.cpp
-index 6f60cd0..c7eac41 100644
+index 8c14e40..bdc283c 100644
 --- a/gexiv2/gexiv2-metadata-xmp.cpp
 +++ b/gexiv2/gexiv2-metadata-xmp.cpp
 @@ -67,7 +67,7 @@ gboolean gexiv2_metadata_has_xmp_tag(GExiv2Metadata *self, const gchar* tag) {
@@ -290,7 +290,7 @@ index 6f60cd0..c7eac41 100644
 -            it++;
 -        
          if (it != xmp_data.end()) {
-             int size = it->count ();
+             auto size = it->count ();
              gchar **array = g_new (gchar*, size + 1);
 @@ -314,12 +301,7 @@ gboolean gexiv2_metadata_set_xmp_tag_multiple (GExiv2Metadata *self, const gchar
      
@@ -317,5 +317,5 @@ index 6f60cd0..c7eac41 100644
              long size = it->size();
              if( size > 0 ) {
 -- 
-2.19.2
+2.26.2
 

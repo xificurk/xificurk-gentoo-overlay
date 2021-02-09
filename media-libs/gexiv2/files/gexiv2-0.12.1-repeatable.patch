@@ -1,4 +1,4 @@
-From 1e0c39d565fb69339686d3f6409bf19363278033 Mon Sep 17 00:00:00 2001
+From d6ffe0f849b16151f9c8cc541dd400747c07c660 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Petr=20Mor=C3=A1vek=20=5BXificurk=5D?= <petr@pada.cz>
 Date: Sun, 19 May 2013 10:06:18 +0200
 Subject: [PATCH] Method for checking if IPTC tag is repeatable.
@@ -11,7 +11,7 @@ Subject: [PATCH] Method for checking if IPTC tag is repeatable.
  4 files changed, 35 insertions(+)
 
 diff --git a/gexiv2/gexiv2-metadata-iptc.cpp b/gexiv2/gexiv2-metadata-iptc.cpp
-index aeac1c7..a212de6 100644
+index a45bf38..ed6d64b 100644
 --- a/gexiv2/gexiv2-metadata-iptc.cpp
 +++ b/gexiv2/gexiv2-metadata-iptc.cpp
 @@ -277,6 +277,21 @@ const gchar* gexiv2_metadata_get_iptc_tag_type (const gchar* tag) {
@@ -37,10 +37,10 @@ index aeac1c7..a212de6 100644
      g_return_val_if_fail(GEXIV2_IS_METADATA (self), NULL);
      g_return_val_if_fail(tag != NULL, NULL);
 diff --git a/gexiv2/gexiv2-metadata-private.h b/gexiv2/gexiv2-metadata-private.h
-index 8818c22..810bcf9 100644
+index b0ccd7a..7e37d9a 100644
 --- a/gexiv2/gexiv2-metadata-private.h
 +++ b/gexiv2/gexiv2-metadata-private.h
-@@ -80,6 +80,7 @@ G_GNUC_INTERNAL gboolean		gexiv2_metadata_set_iptc_tag_multiple	(GExiv2Metadata
+@@ -84,6 +84,7 @@ G_GNUC_INTERNAL gboolean		gexiv2_metadata_set_iptc_tag_multiple	(GExiv2Metadata
  G_GNUC_INTERNAL const gchar*	gexiv2_metadata_get_iptc_tag_label	(const gchar* tag);
  G_GNUC_INTERNAL const gchar*	gexiv2_metadata_get_iptc_tag_description	(const gchar* tag);
  G_GNUC_INTERNAL const gchar*	gexiv2_metadata_get_iptc_tag_type	(const gchar* tag);
@@ -49,10 +49,10 @@ index 8818c22..810bcf9 100644
  G_GNUC_INTERNAL GBytes*			gexiv2_metadata_get_iptc_tag_raw	(GExiv2Metadata *self, const gchar* tag);
  
 diff --git a/gexiv2/gexiv2-metadata.cpp b/gexiv2/gexiv2-metadata.cpp
-index 8a2ab10..57c8d82 100644
+index 63bacaa..4d9d145 100644
 --- a/gexiv2/gexiv2-metadata.cpp
 +++ b/gexiv2/gexiv2-metadata.cpp
-@@ -931,6 +931,17 @@ const gchar* gexiv2_metadata_get_tag_type (const gchar *tag) {
+@@ -1180,6 +1180,17 @@ const gchar* gexiv2_metadata_get_tag_type (const gchar *tag) {
      return NULL;
  }
  
@@ -71,10 +71,10 @@ index 8a2ab10..57c8d82 100644
      g_return_val_if_fail(GEXIV2_IS_METADATA (self), NULL);
      g_return_val_if_fail(tag != NULL, NULL);
 diff --git a/gexiv2/gexiv2-metadata.h b/gexiv2/gexiv2-metadata.h
-index 30b2068..f2d0336 100644
+index c005191..22ee482 100644
 --- a/gexiv2/gexiv2-metadata.h
 +++ b/gexiv2/gexiv2-metadata.h
-@@ -401,6 +401,14 @@ const gchar*	gexiv2_metadata_get_tag_description	(const gchar *tag);
+@@ -414,6 +414,14 @@ const gchar*	gexiv2_metadata_get_tag_description	(const gchar *tag);
   */
  const gchar*	gexiv2_metadata_get_tag_type	(const gchar *tag);
  
@@ -90,5 +90,5 @@ index 30b2068..f2d0336 100644
   * gexiv2_metadata_get_supports_exif:
   * @self: An instance of #GExiv2Metadata
 -- 
-2.19.2
+2.26.2
 

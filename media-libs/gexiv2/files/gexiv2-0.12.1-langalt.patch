@@ -1,4 +1,4 @@
-From 06da57fe090550f9f392c58819541c1d00cb8da5 Mon Sep 17 00:00:00 2001
+From 0a7568e1b1d670600e095be3b5f7981d379ff398 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Petr=20Mor=C3=A1vek=20=5BXificurk=5D?= <petr@pada.cz>
 Date: Sun, 19 May 2013 15:00:03 +0200
 Subject: [PATCH] Add methods for manipulating XMP LangAlt tags.
@@ -6,13 +6,13 @@ Subject: [PATCH] Add methods for manipulating XMP LangAlt tags.
 ---
  gexiv2/gexiv2-metadata-exif.cpp  |  2 +-
  gexiv2/gexiv2-metadata-private.h |  2 ++
- gexiv2/gexiv2-metadata-xmp.cpp   | 61 ++++++++++++++++++++++++++++++++++++++++
- gexiv2/gexiv2-metadata.cpp       | 23 +++++++++++++++
- gexiv2/gexiv2-metadata.h         | 16 +++++++++++
+ gexiv2/gexiv2-metadata-xmp.cpp   | 61 ++++++++++++++++++++++++++++++++
+ gexiv2/gexiv2-metadata.cpp       | 23 ++++++++++++
+ gexiv2/gexiv2-metadata.h         | 16 +++++++++
  5 files changed, 103 insertions(+), 1 deletion(-)
 
 diff --git a/gexiv2/gexiv2-metadata-exif.cpp b/gexiv2/gexiv2-metadata-exif.cpp
-index 7626768..2fb10ab 100644
+index 4a36654..7cdd258 100644
 --- a/gexiv2/gexiv2-metadata-exif.cpp
 +++ b/gexiv2/gexiv2-metadata-exif.cpp
 @@ -126,7 +126,7 @@ gchar* gexiv2_metadata_get_exif_tag_interpreted_string (GExiv2Metadata *self, co
@@ -25,23 +25,23 @@ index 7626768..2fb10ab 100644
          }
      } catch (Exiv2::Error& e) {
 diff --git a/gexiv2/gexiv2-metadata-private.h b/gexiv2/gexiv2-metadata-private.h
-index e534c24..005c80f 100644
+index 7e37d9a..fd8bc19 100644
 --- a/gexiv2/gexiv2-metadata-private.h
 +++ b/gexiv2/gexiv2-metadata-private.h
-@@ -63,6 +63,8 @@ glong			gexiv2_metadata_get_xmp_tag_long	(GExiv2Metadata *self, const gchar* tag
- gboolean		gexiv2_metadata_set_xmp_tag_long	(GExiv2Metadata *self, const gchar* tag, glong value);
- gchar**			gexiv2_metadata_get_xmp_tag_multiple (GExiv2Metadata *self, const gchar* tag);
- gboolean		gexiv2_metadata_set_xmp_tag_multiple (GExiv2Metadata *self, const gchar* tag, const gchar** values);
-+gchar**         gexiv2_metadata_get_xmp_tag_langalt (GExiv2Metadata *self, const gchar* tag);
-+gboolean        gexiv2_metadata_set_xmp_tag_langalt (GExiv2Metadata *self, const gchar* tag, const gchar** values);
+@@ -64,6 +64,8 @@ G_GNUC_INTERNAL glong			gexiv2_metadata_get_xmp_tag_long	(GExiv2Metadata *self,
+ G_GNUC_INTERNAL gboolean		gexiv2_metadata_set_xmp_tag_long	(GExiv2Metadata *self, const gchar* tag, glong value);
+ G_GNUC_INTERNAL gchar**			gexiv2_metadata_get_xmp_tag_multiple (GExiv2Metadata *self, const gchar* tag);
+ G_GNUC_INTERNAL gboolean		gexiv2_metadata_set_xmp_tag_multiple (GExiv2Metadata *self, const gchar* tag, const gchar** values);
++G_GNUC_INTERNAL gchar**         gexiv2_metadata_get_xmp_tag_langalt (GExiv2Metadata *self, const gchar* tag);
++G_GNUC_INTERNAL gboolean        gexiv2_metadata_set_xmp_tag_langalt (GExiv2Metadata *self, const gchar* tag, const gchar** values);
  
- const gchar*	gexiv2_metadata_get_xmp_tag_label		(const gchar* tag);
- const gchar*	gexiv2_metadata_get_xmp_tag_description	(const gchar* tag);
+ G_GNUC_INTERNAL const gchar*	gexiv2_metadata_get_xmp_tag_label		(const gchar* tag);
+ G_GNUC_INTERNAL const gchar*	gexiv2_metadata_get_xmp_tag_description	(const gchar* tag);
 diff --git a/gexiv2/gexiv2-metadata-xmp.cpp b/gexiv2/gexiv2-metadata-xmp.cpp
-index 0039e32..bab7f4c 100644
+index bdc283c..cd9f8ba 100644
 --- a/gexiv2/gexiv2-metadata-xmp.cpp
 +++ b/gexiv2/gexiv2-metadata-xmp.cpp
-@@ -316,6 +316,67 @@ gboolean gexiv2_metadata_set_xmp_tag_multiple (GExiv2Metadata *self, const gchar
+@@ -318,6 +318,67 @@ gboolean gexiv2_metadata_set_xmp_tag_multiple (GExiv2Metadata *self, const gchar
      return FALSE;
  }
  
@@ -110,10 +110,10 @@ index 0039e32..bab7f4c 100644
      g_return_val_if_fail(tag != NULL, NULL);
      
 diff --git a/gexiv2/gexiv2-metadata.cpp b/gexiv2/gexiv2-metadata.cpp
-index ff94796..7d0a0b5 100644
+index 4d9d145..5dc2575 100644
 --- a/gexiv2/gexiv2-metadata.cpp
 +++ b/gexiv2/gexiv2-metadata.cpp
-@@ -726,6 +726,29 @@ gboolean gexiv2_metadata_set_tag_multiple(GExiv2Metadata *self, const gchar* tag
+@@ -1009,6 +1009,29 @@ gboolean gexiv2_metadata_set_tag_multiple(GExiv2Metadata *self, const gchar* tag
      return FALSE;
  }
  
@@ -144,13 +144,14 @@ index ff94796..7d0a0b5 100644
      g_return_val_if_fail(GEXIV2_IS_METADATA(self), 0);
      g_return_val_if_fail(tag != NULL, 0);
 diff --git a/gexiv2/gexiv2-metadata.h b/gexiv2/gexiv2-metadata.h
-index 251c9ab..8744106 100644
+index 22ee482..abb90e4 100644
 --- a/gexiv2/gexiv2-metadata.h
 +++ b/gexiv2/gexiv2-metadata.h
-@@ -446,6 +446,22 @@ gchar**			gexiv2_metadata_get_tag_multiple	(GExiv2Metadata *self, const gchar* t
+@@ -591,6 +591,22 @@ gchar**			gexiv2_metadata_get_tag_multiple	(GExiv2Metadata *self, const gchar* t
+  */
  gboolean		gexiv2_metadata_set_tag_multiple	(GExiv2Metadata *self, const gchar* tag, const gchar** values);
  
- /**
++/**
 + * gexiv2_metadata_get_tag_langalt:
 + * @tag: The name of the tag to get
 + *
@@ -166,10 +167,9 @@ index 251c9ab..8744106 100644
 + */
 +gboolean        gexiv2_metadata_set_tag_langalt    (GExiv2Metadata *self, const gchar* tag, const gchar** values);
 +
-+/**
+ /**
   * gexiv2_metadata_get_tag_raw:
-  * @tag: Exiv2 tag name
-  *
+  * @self: An instance of #GExiv2Metadata
 -- 
-2.13.6
+2.26.2
 
