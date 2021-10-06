@@ -32,7 +32,7 @@ python_install() {
 	distutils-r1_python_install
 
 	# install scripts
-	local python_scriptroot=/usr/sbin
+	python_scriptinto /usr/sbin
 	python_doscript bin/smtd
 	fowners smt:smt "/usr/lib/python-exec/${EPYTHON}/smtd"
 	fperms 750 "/usr/lib/python-exec/${EPYTHON}/smtd"
