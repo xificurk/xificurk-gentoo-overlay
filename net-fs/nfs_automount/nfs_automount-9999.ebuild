@@ -22,7 +22,7 @@ RDEPEND="app-shells/bash
 	net-nds/rpcbind
 	sys-apps/util-linux
 	sys-apps/grep
-	virtual/awk"
+	app-alternatives/awk"
 
 DOCS=( README )
 
