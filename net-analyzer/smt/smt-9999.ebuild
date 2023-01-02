@@ -1,13 +1,12 @@
 # Copyright 1999-2012 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: $
 
-EAPI="7"
+EAPI="8"
 
 EGIT_REPO_URI="https://github.com/xificurk/smt.git"
 PYTHON_COMPAT=( python3_1 python3_2 python3_3 python3_4 python3_5 python3_6 python3_7 python3_8 python3_9 python3_10 )
 
-inherit distutils-r1 git-r3 user
+inherit distutils-r1 git-r3
 
 DESCRIPTION="Simple monitoring tool for various sensors."
 HOMEPAGE="https://github.com/xificurk/smt"
@@ -17,16 +16,16 @@ SLOT="0"
 KEYWORDS="amd64 x86"
 IUSE=""
 
-DEPEND=""
-RDEPEND="net-analyzer/rrdtool"
+DEPEND="
+	acct-group/smt
+	acct-user/smt
+"
+RDEPEND="${DEPEND}
+	net-analyzer/rrdtool
+"
 
 DOCS=( README.md CHANGES )
 
-
-pkg_setup() {
-	enewgroup smt
-	enewuser smt -1 -1 /var/lib/smt smt
-}
 
 python_install() {
 	distutils-r1_python_install
