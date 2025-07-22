@@ -5,7 +5,7 @@ EAPI="8"
 
 EGIT_REPO_URI="https://github.com/xificurk/smt.git"
 PYTHON_COMPAT=( python3_1 python3_2 python3_3 python3_4 python3_5 python3_6 python3_7 python3_8 python3_9 python3_10 python3_11 python3_12 python3_13 )
-
+DISTUTILS_USE_PEP517="setuptools"
 inherit distutils-r1 git-r3
 
 DESCRIPTION="Simple monitoring tool for various sensors."
